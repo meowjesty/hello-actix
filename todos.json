@@ -1,0 +1,19 @@
+{
+    "todos": [
+        {
+            "id": 1,
+            "task": "First task",
+            "details": "First task details"
+        },
+        {
+            "id": 2,
+            "task": "Second task",
+            "details": "Second task details"
+        },
+        {
+            "id": 3,
+            "task": "Third task",
+            "details": "Third task details"
+        }
+    ]
+}
