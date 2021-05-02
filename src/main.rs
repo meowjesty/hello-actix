@@ -24,16 +24,13 @@ struct Todo {
 
 // Responder
 impl Responder for Todo {
-    type Error = Error;
-    type Future = Ready<Result<HttpResponse, Error>>;
-
-    fn respond_to(self, _req: &HttpRequest) -> Self::Future {
+    fn respond_to(self, req: &HttpRequest) -> HttpResponse {
         let body = serde_json::to_string(&self).unwrap();
 
         // Create response and set content type
-        ready(Ok(HttpResponse::Ok()
+        HttpResponse::Ok()
             .content_type("application/json")
-            .body(body)))
+            .body(body)
     }
 }
 
