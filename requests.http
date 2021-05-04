@@ -1,3 +1,21 @@
-# GET http://127.0.0.1:8080
+@baseUrl = http://127.0.0.1:8080
 
-GET http://127.0.0.1:8080/todos/2
+# @name insert
+POST {{baseUrl}}/todos HTTP/1.1
+content-type: application/json
+
+{
+    "task": "Task from request",
+    "details": "Some details from the request"
+}
+
+
+####
+
+# @name get_index
+GET {{baseUrl}}/ HTTP/1.1
+
+####
+
+# @name get_todos
+GET {{baseUrl}}/todos HTTP/1.1

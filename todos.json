@@ -1,17 +1,18 @@
 {
+    "id_tracker": 3,
     "todos": [
         {
-            "id": 1,
+            "id": 0,
             "task": "First task",
             "details": "First task details"
         },
         {
-            "id": 2,
+            "id": 1,
             "task": "Second task",
             "details": "Second task details"
         },
         {
-            "id": 3,
+            "id": 2,
             "task": "Third task",
             "details": "Third task details"
         }
