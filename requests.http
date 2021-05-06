@@ -12,7 +12,18 @@ content-type: application/json
 ####
 
 # @name delete
-POST {{baseUrl}}/todos/4 HTTP/1.1
+POST {{baseUrl}}/todos/1 HTTP/1.1
+
+####
+
+# @name update
+PUT {{baseUrl}}/todos/1 HTTP/1.1
+content-type: application/json
+
+{
+    "task": "Task from put request",
+    "details": "Some details updated"
+}
 
 ####
 

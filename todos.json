@@ -1,25 +1,25 @@
 {
-    "id_tracker": 5,
-    "todos": [
-        {
-            "id": 0,
-            "task": "First task",
-            "details": "First task details"
-        },
-        {
-            "id": 1,
-            "task": "Second task",
-            "details": "Second task details"
-        },
-        {
-            "id": 2,
-            "task": "Third task",
-            "details": "Third task details"
-        },
-        {
-            "id": 3,
-            "task": "Task from request",
-            "details": "Some details from the request"
-        }
-    ]
+  "id_tracker": 6,
+  "todos": [
+    {
+      "id": 0,
+      "task": "First task",
+      "details": "First task details"
+    },
+    {
+      "id": 1,
+      "task": "Task from put request",
+      "details": "Some details updated"
+    },
+    {
+      "id": 2,
+      "task": "Third task",
+      "details": "Third task details"
+    },
+    {
+      "id": 5,
+      "task": "Task from request another one",
+      "details": "Some details from the request wow"
+    }
+  ]
 }

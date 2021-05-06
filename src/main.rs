@@ -1,7 +1,7 @@
 use std::{self, fs::OpenOptions, io::BufReader};
 
 use actix_web::{
-    error, get, post,
+    error, get, post, put,
     web::{self, Data},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
@@ -23,7 +23,7 @@ struct Todo {
 // Responder
 impl Responder for Todo {
     fn respond_to(self, req: &HttpRequest) -> HttpResponse {
-        let body = serde_json::to_string(&self).unwrap();
+        let body = serde_json::to_string_pretty(&self).unwrap();
 
         // Create response and set content type
         HttpResponse::Ok()
@@ -63,7 +63,8 @@ struct InputTodo {
 }
 
 #[post("/todos")]
-async fn create_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Result<String> {
+async fn create_todo(req: HttpRequest, item: web::Json<InputTodo>) -> Result<String> {
+    let data = req.app_data::<Data<AppData>>().unwrap();
     let new_todo = Todo {
         id: data.id_tracker,
         task: item.task.clone(),
@@ -81,17 +82,31 @@ async fn create_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Re
         todos: new_todos,
     };
 
-    std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
+    std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
 
     Ok(format!("{:?}", data))
 }
 
 #[post("/todos/{id}")]
-async fn delete_todo(
-    data: web::Data<AppData>,
-    req: HttpRequest,
-    id: web::Path<u64>,
-) -> Result<String> {
+async fn delete_todo(req: HttpRequest, id: web::Path<u64>) -> Result<String> {
+    let data = req.app_data::<Data<AppData>>().unwrap();
+    // let todos = data
+    //     .todos
+    //     .clone()
+    //     .into_iter()
+    //     .filter(|todo| todo.id != *id)
+    //     .collect::<Vec<_>>();
+    // let deleted = data.todos.len() - todos.len();
+
+    // let new_app_data = AppData {
+    //     id_tracker: data.id_tracker,
+    //     todos,
+    // };
+
+    // let path = std::path::Path::new("./todos.json");
+    // std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
+    // Ok(format!("deleted {:?}", deleted))
+
     match data
         .todos
         .iter()
@@ -108,7 +123,44 @@ async fn delete_todo(
             };
 
             let path = std::path::Path::new("./todos.json");
-            std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
+            std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
+            Ok(format!("{:?}", todo))
+        }
+        None => Err(error::ErrorNotFound(format!("No todo with id {:#?}", id))),
+    }
+}
+
+#[put("/todos/{id}")]
+async fn update_todo(
+    req: HttpRequest,
+    id: web::Path<u64>,
+    item: web::Json<InputTodo>,
+) -> Result<String> {
+    let data = req.app_data::<Data<AppData>>().unwrap();
+    match data
+        .todos
+        .iter()
+        .enumerate()
+        .find(|(_, todo)| todo.id == *id)
+    {
+        Some((i, todo)) => {
+            let mut new_todos = data.todos.clone();
+            new_todos.insert(
+                i,
+                Todo {
+                    id: todo.id,
+                    task: item.task.to_string(),
+                    details: item.details.to_string(),
+                },
+            );
+            new_todos.remove(i + 1);
+
+            let new_app_data = AppData {
+                id_tracker: data.id_tracker,
+                todos: new_todos,
+            };
+            let path = std::path::Path::new("./todos.json");
+            std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
             Ok(format!("{:?}", todo))
         }
         None => Err(error::ErrorNotFound(format!("No todo with id {:#?}", id))),
@@ -140,6 +192,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_todo)
             .service(read_todos)
             .service(delete_todo)
+            .service(update_todo)
     })
     .bind("127.0.0.1:8080")?
     .run()
