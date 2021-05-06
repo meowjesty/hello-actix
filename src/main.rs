@@ -167,10 +167,20 @@ async fn update_todo(
     }
 }
 
+#[get("/hello")]
+async fn hello() -> Result<String> {
+    Ok(format!("Hello from api!"))
+}
+
+#[get("/hello/{id}")]
+async fn hello_id(id: web::Path<u64>) -> Result<String> {
+    Ok(format!("Hello from api {}!", id))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Open the file in read-only mode with buffer.
     let path = std::path::Path::new("./todos.json");
+    // TODO(alex) 2021-05-06: Create the file with initial data if it doesn't exist.
     let file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -185,14 +195,28 @@ async fn main() -> std::io::Result<()> {
     println!("appdata {:#?}", app_data);
 
     HttpServer::new(move || {
-        App::new()
-            .data(app_data.clone())
-            .service(index)
+        // NOTE(alex): Scopes are a little messy, what are the actual benefits? For such a simple
+        // example I can't see any, but maybe as the project grows, who knows...
+        let hello_scope = web::scope("/api").service(hello).service(hello_id);
+
+        // NOTE(alex): `scope` expands into `/(service)`.
+        let todos_scope = web::scope("/")
             .service(read_todos_by_id)
             .service(create_todo)
             .service(read_todos)
             .service(delete_todo)
-            .service(update_todo)
+            .service(update_todo);
+
+        App::new()
+            .data(app_data.clone())
+            .service(index)
+            .service(hello_scope)
+            .service(todos_scope)
+        // WARNING(alex): Matching order matters, if `hello_scope` is put after `todos`, then it
+        // won't match, and returns 404.
+        // .service(hello_scope)
+        // WARNING(alex): No compilation error on registering a service twice!
+        // .service(read_todos_by_id)
     })
     .bind("127.0.0.1:8080")?
     .run()

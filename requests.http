@@ -34,3 +34,18 @@ GET {{baseUrl}}/ HTTP/1.1
 
 # @name get_todos
 GET {{baseUrl}}/todos HTTP/1.1
+
+####
+
+# @name get_by_id
+GET {{baseUrl}}/todos/0 HTTP/1.1
+
+####
+
+# @name hello
+GET {{baseUrl}}/api/hello HTTP/1.1
+
+####
+
+# @name hello_id
+GET {{baseUrl}}/api/hello/10 HTTP/1.1
