@@ -1,6 +1,6 @@
 @baseUrl = http://127.0.0.1:8080
 
-# @name insert
+# @name create
 POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
@@ -9,10 +9,14 @@ content-type: application/json
     "details": "Some details from the request wow"
 }
 
+####
+
+# @name delete
+POST {{baseUrl}}/todos/4 HTTP/1.1
 
 ####
 
-# @name get_index
+# @name index
 GET {{baseUrl}}/ HTTP/1.1
 
 ####

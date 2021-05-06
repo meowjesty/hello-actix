@@ -20,11 +20,6 @@
             "id": 3,
             "task": "Task from request",
             "details": "Some details from the request"
-        },
-        {
-            "id": 4,
-            "task": "Task from request another one",
-            "details": "Some details from the request wow"
         }
     ]
 }

@@ -39,13 +39,13 @@ async fn index(data: web::Data<AppData>) -> Result<HttpResponse, Error> {
 }
 
 #[get("/todos")]
-async fn get_todos(data: web::Data<AppData>) -> Result<HttpResponse, Error> {
+async fn read_todos(data: web::Data<AppData>) -> Result<HttpResponse, Error> {
     let response = HttpResponse::Ok().json(&data.todos);
     Ok(response)
 }
 
 #[get("/todos/{id}")] // <- define path parameters
-async fn todos_by_id(req: HttpRequest, id: web::Path<u64>) -> Result<String> {
+async fn read_todos_by_id(req: HttpRequest, id: web::Path<u64>) -> Result<String> {
     let data = req.app_data::<Data<AppData>>().unwrap();
     let todo = data
         .todos
@@ -63,7 +63,7 @@ struct InputTodo {
 }
 
 #[post("/todos")]
-async fn insert_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Result<String> {
+async fn create_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Result<String> {
     let new_todo = Todo {
         id: data.id_tracker,
         task: item.task.clone(),
@@ -84,6 +84,35 @@ async fn insert_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Re
     std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
 
     Ok(format!("{:?}", data))
+}
+
+#[post("/todos/{id}")]
+async fn delete_todo(
+    data: web::Data<AppData>,
+    req: HttpRequest,
+    id: web::Path<u64>,
+) -> Result<String> {
+    match data
+        .todos
+        .iter()
+        .enumerate()
+        .find(|(_, todo)| todo.id == *id)
+    {
+        Some((i, todo)) => {
+            let mut new_todos = data.todos.clone();
+            new_todos.remove(i);
+
+            let new_app_data = AppData {
+                id_tracker: data.id_tracker,
+                todos: new_todos,
+            };
+
+            let path = std::path::Path::new("./todos.json");
+            std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
+            Ok(format!("{:?}", todo))
+        }
+        None => Err(error::ErrorNotFound(format!("No todo with id {:#?}", id))),
+    }
 }
 
 #[actix_web::main]
@@ -107,9 +136,10 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .data(app_data.clone())
             .service(index)
-            .service(todos_by_id)
-            .service(insert_todo)
-            .service(get_todos)
+            .service(read_todos_by_id)
+            .service(create_todo)
+            .service(read_todos)
+            .service(delete_todo)
     })
     .bind("127.0.0.1:8080")?
     .run()
