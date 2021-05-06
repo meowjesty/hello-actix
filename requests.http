@@ -5,8 +5,8 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "Task from request",
-    "details": "Some details from the request"
+    "task": "Task from request another one",
+    "details": "Some details from the request wow"
 }
 
 

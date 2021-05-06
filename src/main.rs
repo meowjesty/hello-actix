@@ -1,20 +1,10 @@
-#![feature(try_find)]
-
-use std::{
-    fs::File,
-    io::{BufReader, BufWriter},
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Mutex,
-    },
-};
+use std::{self, fs::OpenOptions, io::BufReader};
 
 use actix_web::{
     error, get, post,
     web::{self, Data},
-    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, ResponseError, Result,
+    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
-use futures::future::{ready, Ready};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -81,18 +71,17 @@ async fn insert_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Re
     };
 
     let path = std::path::Path::new("./todos.json");
-    let file = File::open(path).unwrap();
-    let writer = BufWriter::new(file);
+    // NOTE(alex): `OpenOptions` puts the file pointer at the end, this means that overwritting
+    // the file is wonky.
+    // let file = OpenOptions::new().write(true).open(path).unwrap();
     let mut new_todos = data.todos.clone();
     new_todos.push(new_todo);
     let new_app_data = AppData {
         id_tracker: data.id_tracker + 1,
         todos: new_todos,
     };
-    // TODO(alex) 2021-05-04: Figure out why this isn't writing to the file correctly (it doesn't
-    // add data to the file, but changes its modified date).
-    serde_json::to_writer(writer, &new_app_data)
-        .map_err(|fail| error::ErrorPreconditionFailed(format!("{}", fail)))?;
+
+    std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
 
     Ok(format!("{:?}", data))
 }
@@ -101,7 +90,12 @@ async fn insert_todo(data: web::Data<AppData>, item: web::Json<InputTodo>) -> Re
 async fn main() -> std::io::Result<()> {
     // Open the file in read-only mode with buffer.
     let path = std::path::Path::new("./todos.json");
-    let file = File::open(path).unwrap();
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .read(true)
+        .open(path)
+        .unwrap();
     let reader = BufReader::new(file);
 
     // WARNING(alex): If you forget to type the result, some unit type will be figured out by rust
