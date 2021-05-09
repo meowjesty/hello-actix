@@ -34,21 +34,58 @@ struct Todo {
 }
 
 impl Todo {
+    const CREATE_DATABASE: &'static str =
+        include_str!("./../databases/queries/create_database.sql");
+    const FIND_ALL: &'static str = include_str!("./../databases/queries/find_all.sql");
+    const FIND_BY_ID: &'static str = include_str!("./../databases/queries/find_by_id.sql");
+    const INSERT: &'static str = include_str!("./../databases/queries/insert.sql");
+
+    pub async fn create_database(pool: &SqlitePool) -> i64 {
+        let mut connection = pool.acquire().await.unwrap();
+
+        sqlx::query(Self::CREATE_DATABASE)
+            .execute(&mut connection)
+            .await
+            .unwrap()
+            .last_insert_rowid()
+    }
+
     pub async fn find_all(pool: &SqlitePool) -> impl Responder {
-        let todos: Vec<Todo> = sqlx::query_as(
-            r#"
-            select * from OngoingTodo
-        "#,
-        )
-        .fetch_all(pool)
-        .await
-        .unwrap();
+        let todos: Vec<Todo> = sqlx::query_as(Self::FIND_ALL)
+            .fetch_all(pool)
+            .await
+            .unwrap();
 
         let body = serde_json::to_string_pretty(&todos).unwrap();
         // Create response and set content type
         HttpResponse::Ok()
             .content_type("application/json")
             .body(body)
+    }
+
+    pub async fn find_by_id(pool: &SqlitePool, id: i64) -> impl Responder {
+        let todos: Option<Todo> = sqlx::query_as(Self::FIND_BY_ID)
+            .bind(id)
+            .fetch_optional(pool)
+            .await
+            .unwrap();
+
+        let body = serde_json::to_string_pretty(&todos).unwrap();
+        // Create response and set content type
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .body(body)
+    }
+
+    pub async fn create(pool: &SqlitePool, input: &InputTodo) -> i64 {
+        let mut connection = pool.acquire().await.unwrap();
+        sqlx::query(Self::INSERT)
+            .bind(&input.task)
+            .bind(&input.details)
+            .execute(&mut connection)
+            .await
+            .unwrap()
+            .last_insert_rowid()
     }
 }
 
@@ -65,27 +102,21 @@ impl Responder for Todo {
 }
 
 #[get("/")]
-async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
-    let response = HttpResponse::Ok().json(&pool.todos);
-    Ok(response)
+async fn index(pool: web::Data<SqlitePool>) -> impl Responder {
+    let response = Todo::find_all(pool.get_ref()).await;
+    response
 }
 
 #[get("/todos")]
-async fn read_todos(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
-    let response = HttpResponse::Ok().json(&data.todos);
-    Ok(response)
+async fn find_all(pool: web::Data<SqlitePool>) -> impl Responder {
+    let response = Todo::find_all(pool.get_ref()).await;
+    response
 }
 
 #[get("/todos/{id}")] // <- define path parameters
-async fn read_todos_by_id(pool: web::Data<SqlitePool>, id: web::Path<u64>) -> Result<String> {
-    let data = req.app_data::<Data<AppData>>().unwrap();
-    let todo = data
-        .todos
-        .iter()
-        .find(|todo| todo.id == *id)
-        .ok_or(error::ErrorNotFound(format!("No todo with id {:#?}", id)))?;
-
-    Ok(format!("Todo {:#?}", todo))
+async fn find_by_id(pool: web::Data<SqlitePool>, id: web::Path<i64>) -> impl Responder {
+    let response = Todo::find_by_id(pool.get_ref(), *id).await;
+    response
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,108 +126,27 @@ struct InputTodo {
 }
 
 #[post("/todos")]
-async fn create_todo(req: HttpRequest, item: web::Json<InputTodo>) -> Result<String> {
-    let data = req.app_data::<Data<AppData>>().unwrap();
-    let new_todo = Todo {
-        id: data.id_tracker,
-        task: item.task.clone(),
-        details: item.details.clone(),
-    };
-
-    let path = std::path::Path::new("./todos.json");
-    // NOTE(alex): `OpenOptions` puts the file pointer at the end, this means that overwritting
-    // the file is wonky.
-    // let file = OpenOptions::new().write(true).open(path).unwrap();
-    let mut new_todos = data.todos.clone();
-    new_todos.push(new_todo);
-    let new_app_data = AppData {
-        id_tracker: data.id_tracker + 1,
-        todos: new_todos,
-    };
-
-    std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
-
-    Ok(format!("{:?}", data))
+async fn create_todo(pool: web::Data<SqlitePool>, item: web::Json<InputTodo>) -> impl Responder {
+    let response = Todo::create(pool.get_ref(), &item).await;
+    response.to_string()
 }
 
 #[post("/todos/{id}")]
-async fn delete_todo(req: HttpRequest, id: web::Path<u64>) -> Result<String> {
-    let data = req.app_data::<Data<AppData>>().unwrap();
-    // let todos = data
-    //     .todos
-    //     .clone()
-    //     .into_iter()
-    //     .filter(|todo| todo.id != *id)
-    //     .collect::<Vec<_>>();
-    // let deleted = data.todos.len() - todos.len();
-
-    // let new_app_data = AppData {
-    //     id_tracker: data.id_tracker,
-    //     todos,
-    // };
-
-    // let path = std::path::Path::new("./todos.json");
-    // std::fs::write(path, serde_json::to_string(&new_app_data).unwrap()).unwrap();
-    // Ok(format!("deleted {:?}", deleted))
-
-    match data
-        .todos
-        .iter()
-        .enumerate()
-        .find(|(_, todo)| todo.id == *id)
-    {
-        Some((i, todo)) => {
-            let mut new_todos = data.todos.clone();
-            new_todos.remove(i);
-
-            let new_app_data = AppData {
-                id_tracker: data.id_tracker,
-                todos: new_todos,
-            };
-
-            let path = std::path::Path::new("./todos.json");
-            std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
-            Ok(format!("{:?}", todo))
-        }
-        None => Err(error::ErrorNotFound(format!("No todo with id {:#?}", id))),
-    }
+async fn delete_todo(pool: web::Data<SqlitePool>, id: web::Path<u64>) -> impl Responder {
+    todo!();
+    let response = Todo::find_all(pool.get_ref()).await;
+    response
 }
 
 #[put("/todos/{id}")]
 async fn update_todo(
-    req: HttpRequest,
+    pool: web::Data<SqlitePool>,
     id: web::Path<u64>,
     item: web::Json<InputTodo>,
-) -> Result<String> {
-    let data = req.app_data::<Data<AppData>>().unwrap();
-    match data
-        .todos
-        .iter()
-        .enumerate()
-        .find(|(_, todo)| todo.id == *id)
-    {
-        Some((i, todo)) => {
-            let mut new_todos = data.todos.clone();
-            new_todos.insert(
-                i,
-                Todo {
-                    id: todo.id,
-                    task: item.task.to_string(),
-                    details: item.details.to_string(),
-                },
-            );
-            new_todos.remove(i + 1);
-
-            let new_app_data = AppData {
-                id_tracker: data.id_tracker,
-                todos: new_todos,
-            };
-            let path = std::path::Path::new("./todos.json");
-            std::fs::write(path, serde_json::to_string_pretty(&new_app_data).unwrap()).unwrap();
-            Ok(format!("{:?}", todo))
-        }
-        None => Err(error::ErrorNotFound(format!("No todo with id {:#?}", id))),
-    }
+) -> impl Responder {
+    todo!();
+    let response = Todo::find_all(pool.get_ref()).await;
+    response
 }
 
 #[get("/hello")]
@@ -214,7 +164,7 @@ async fn main() -> std::io::Result<()> {
     let config_file = include_bytes!("./../config.json");
     let config: Config = serde_json::from_slice(config_file)?;
 
-    std::env::set_var("DATABASE_URL", config.database);
+    // std::env::set_var("DATABASE_URL", config.database);
 
     // Create a connection pool
     //  for MySQL, use MySqlPoolOptions::new()
@@ -227,6 +177,8 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap();
 
+    Todo::create_database(&database_pool).await;
+
     let server = HttpServer::new(move || {
         // NOTE(alex): Scopes are a little messy, what are the actual benefits? For such a simple
         // example I can't see any, but maybe as the project grows, who knows...
@@ -234,9 +186,9 @@ async fn main() -> std::io::Result<()> {
 
         // NOTE(alex): `scope` expands into `/(service)`.
         let todos_scope = web::scope("/")
-            .service(read_todos_by_id)
+            .service(find_all)
+            .service(find_by_id)
             .service(create_todo)
-            .service(read_todos)
             .service(delete_todo)
             .service(update_todo);
 
