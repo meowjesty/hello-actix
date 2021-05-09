@@ -1,11 +1,24 @@
-use std::{self, fs::OpenOptions, io::BufReader};
+use std::{
+    self,
+    fs::{File, OpenOptions},
+    io::BufReader,
+    net::{SocketAddr, ToSocketAddrs},
+};
 
 use actix_web::{
     error, get, post, put,
     web::{self, Data},
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
+use log::info;
 use serde::{Deserialize, Serialize};
+use sqlx::{sqlite::SqlitePoolOptions, FromRow, SqlitePool};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct Config {
+    address: SocketAddr,
+    database: String,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct AppData {
@@ -13,11 +26,30 @@ struct AppData {
     todos: Vec<Todo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 struct Todo {
-    id: u64,
+    id: i64,
     task: String,
     details: String,
+}
+
+impl Todo {
+    pub async fn find_all(pool: &SqlitePool) -> impl Responder {
+        let todos: Vec<Todo> = sqlx::query_as(
+            r#"
+            select * from OngoingTodo
+        "#,
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+        let body = serde_json::to_string_pretty(&todos).unwrap();
+        // Create response and set content type
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .body(body)
+    }
 }
 
 // Responder
@@ -33,19 +65,19 @@ impl Responder for Todo {
 }
 
 #[get("/")]
-async fn index(data: web::Data<AppData>) -> Result<HttpResponse, Error> {
-    let response = HttpResponse::Ok().json(&data.todos);
+async fn index(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
+    let response = HttpResponse::Ok().json(&pool.todos);
     Ok(response)
 }
 
 #[get("/todos")]
-async fn read_todos(data: web::Data<AppData>) -> Result<HttpResponse, Error> {
+async fn read_todos(pool: web::Data<SqlitePool>) -> Result<HttpResponse, Error> {
     let response = HttpResponse::Ok().json(&data.todos);
     Ok(response)
 }
 
 #[get("/todos/{id}")] // <- define path parameters
-async fn read_todos_by_id(req: HttpRequest, id: web::Path<u64>) -> Result<String> {
+async fn read_todos_by_id(pool: web::Data<SqlitePool>, id: web::Path<u64>) -> Result<String> {
     let data = req.app_data::<Data<AppData>>().unwrap();
     let todo = data
         .todos
@@ -179,22 +211,23 @@ async fn hello_id(id: web::Path<u64>) -> Result<String> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let path = std::path::Path::new("./todos.json");
-    // TODO(alex) 2021-05-06: Create the file with initial data if it doesn't exist.
-    let file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .read(true)
-        .open(path)
+    let config_file = include_bytes!("./../config.json");
+    let config: Config = serde_json::from_slice(config_file)?;
+
+    std::env::set_var("DATABASE_URL", config.database);
+
+    // Create a connection pool
+    //  for MySQL, use MySqlPoolOptions::new()
+    //  for SQLite, use SqlitePoolOptions::new()
+    //  etc.
+    // WARNING(alex): This fails if there is no `databases/todo.db` file.
+    let database_pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&config.database)
+        .await
         .unwrap();
-    let reader = BufReader::new(file);
 
-    // WARNING(alex): If you forget to type the result, some unit type will be figured out by rust
-    // (incorrectely), even though the json structure is fine.
-    let app_data: AppData = serde_json::from_reader(reader)?;
-    println!("appdata {:#?}", app_data);
-
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         // NOTE(alex): Scopes are a little messy, what are the actual benefits? For such a simple
         // example I can't see any, but maybe as the project grows, who knows...
         let hello_scope = web::scope("/api").service(hello).service(hello_id);
@@ -208,7 +241,7 @@ async fn main() -> std::io::Result<()> {
             .service(update_todo);
 
         App::new()
-            .data(app_data.clone())
+            .data(database_pool.clone())
             .service(index)
             .service(hello_scope)
             .service(todos_scope)
@@ -218,7 +251,10 @@ async fn main() -> std::io::Result<()> {
         // WARNING(alex): No compilation error on registering a service twice!
         // .service(read_todos_by_id)
     })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await
+    .bind(config.address)?;
+
+    info!("Starting server!");
+    server.run().await?;
+
+    Ok(())
 }

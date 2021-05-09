@@ -11,3 +11,6 @@ actix-web = "4.0.0-beta.6"
 serde = { version = "*", features = ["derive"] }
 serde_json = { version = "*" }
 futures = { version = "*" }
+sqlx = { version = "*", features = [ "runtime-actix-rustls", "sqlite", "macros" ] }
+log = "*"
+env_logger = "*"
