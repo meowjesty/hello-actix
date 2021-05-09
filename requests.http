@@ -5,8 +5,8 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "Is this working?",
-    "details": "More details"
+    "task": "Second todo",
+    "details": "Even more details"
 }
 
 ####
@@ -17,7 +17,7 @@ POST {{baseUrl}}/todos/1 HTTP/1.1
 ####
 
 # @name update
-PUT {{baseUrl}}/todos/1 HTTP/1.1
+PUT {{baseUrl}}/todos/2 HTTP/1.1
 content-type: application/json
 
 {
