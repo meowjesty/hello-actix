@@ -32,8 +32,18 @@ GET {{baseUrl}}/ HTTP/1.1
 
 ####
 
-# @name get_todos
+# @name find_ongoing
 GET {{baseUrl}}/todos HTTP/1.1
+
+####
+
+# @name find_all
+GET {{baseUrl}}/todos/all HTTP/1.1
+
+####
+
+# @name done
+POST {{baseUrl}}/todos/1/done HTTP/1.1
 
 ####
 

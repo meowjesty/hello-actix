@@ -18,11 +18,14 @@ pub(crate) struct InputTodo {
 impl Todo {
     const CREATE_DATABASE: &'static str =
         include_str!("./../databases/queries/create_database.sql");
+    const FIND_ONGOING: &'static str = include_str!("./../databases/queries/find_ongoing.sql");
     const FIND_ALL: &'static str = include_str!("./../databases/queries/find_all.sql");
     const FIND_BY_ID: &'static str = include_str!("./../databases/queries/find_by_id.sql");
     const INSERT: &'static str = include_str!("./../databases/queries/insert.sql");
     const UPDATE: &'static str = include_str!("./../databases/queries/update.sql");
     const DELETE: &'static str = include_str!("./../databases/queries/delete.sql");
+
+    const DONE: &'static str = include_str!("./../databases/queries/done.sql");
 
     pub(crate) async fn create_database(pool: &SqlitePool) -> i64 {
         let mut connection = pool.acquire().await.unwrap();
@@ -32,6 +35,13 @@ impl Todo {
             .await
             .unwrap()
             .last_insert_rowid()
+    }
+
+    pub(crate) async fn find_ongoing(pool: &SqlitePool) -> Vec<Todo> {
+        sqlx::query_as(Self::FIND_ONGOING)
+            .fetch_all(pool)
+            .await
+            .unwrap()
     }
 
     pub(crate) async fn find_all(pool: &SqlitePool) -> Vec<Todo> {
@@ -75,6 +85,16 @@ impl Todo {
     pub(crate) async fn delete(pool: &SqlitePool, id: i64) -> i64 {
         let mut connection = pool.acquire().await.unwrap();
         sqlx::query(Self::DELETE)
+            .bind(id)
+            .execute(&mut connection)
+            .await
+            .unwrap()
+            .last_insert_rowid()
+    }
+
+    pub(crate) async fn done(pool: &SqlitePool, id: i64) -> i64 {
+        let mut connection = pool.acquire().await.unwrap();
+        sqlx::query(Self::DONE)
             .bind(id)
             .execute(&mut connection)
             .await
