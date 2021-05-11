@@ -1,4 +1,6 @@
-use actix_web::{HttpRequest, HttpResponse, Responder};
+use actix_web::{Error, HttpRequest, HttpResponse, Responder};
+use anyhow::Result;
+use futures::future::{ready, Ready};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
@@ -28,100 +30,102 @@ impl Todo {
     const DONE: &'static str = include_str!("./../databases/queries/done.sql");
     const UNDO: &'static str = include_str!("./../databases/queries/undo.sql");
 
-    pub(crate) async fn create_database(pool: &SqlitePool) -> i64 {
-        let mut connection = pool.acquire().await.unwrap();
+    pub(crate) async fn create_database(pool: &SqlitePool) -> Result<u64> {
+        let mut connection = pool.acquire().await?;
 
-        sqlx::query(Self::CREATE_DATABASE)
+        let result = sqlx::query(Self::CREATE_DATABASE)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+        Ok(result.rows_affected())
     }
 
-    pub(crate) async fn find_ongoing(pool: &SqlitePool) -> Vec<Todo> {
-        sqlx::query_as(Self::FIND_ONGOING)
-            .fetch_all(pool)
-            .await
-            .unwrap()
+    pub(crate) async fn find_ongoing(pool: &SqlitePool) -> Result<Vec<Todo>> {
+        let result = sqlx::query_as(Self::FIND_ONGOING).fetch_all(pool).await?;
+
+        Ok(result)
     }
 
-    pub(crate) async fn find_all(pool: &SqlitePool) -> Vec<Todo> {
-        sqlx::query_as(Self::FIND_ALL)
-            .fetch_all(pool)
-            .await
-            .unwrap()
+    pub(crate) async fn find_all(pool: &SqlitePool) -> Result<Vec<Todo>> {
+        let result = sqlx::query_as(Self::FIND_ALL).fetch_all(pool).await?;
+
+        Ok(result)
     }
 
-    pub(crate) async fn find_by_id(pool: &SqlitePool, id: i64) -> Option<Todo> {
-        sqlx::query_as(Self::FIND_BY_ID)
+    pub(crate) async fn find_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Todo>> {
+        let result = sqlx::query_as(Self::FIND_BY_ID)
             .bind(id)
             .fetch_optional(pool)
-            .await
-            .unwrap()
+            .await?;
+
+        Ok(result)
     }
 
-    pub(crate) async fn create(pool: &SqlitePool, input: &InputTodo) -> i64 {
+    pub(crate) async fn create(pool: &SqlitePool, input: &InputTodo) -> Result<i64> {
         let mut connection = pool.acquire().await.unwrap();
-        sqlx::query(Self::INSERT)
+        let result = sqlx::query(Self::INSERT)
             .bind(&input.task)
             .bind(&input.details)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+
+        Ok(result.last_insert_rowid())
     }
 
-    pub(crate) async fn update(pool: &SqlitePool, id: i64, input: &InputTodo) -> i64 {
+    pub(crate) async fn update(pool: &SqlitePool, id: i64, input: &InputTodo) -> Result<u64> {
         let mut connection = pool.acquire().await.unwrap();
-        sqlx::query(Self::UPDATE)
+        let result = sqlx::query(Self::UPDATE)
             .bind(&input.task)
             .bind(&input.details)
             .bind(id)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+
+        Ok(result.rows_affected())
     }
 
-    pub(crate) async fn delete(pool: &SqlitePool, id: i64) -> i64 {
+    pub(crate) async fn delete(pool: &SqlitePool, id: i64) -> Result<u64> {
         let mut connection = pool.acquire().await.unwrap();
-        sqlx::query(Self::DELETE)
+        let result = sqlx::query(Self::DELETE)
             .bind(id)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+
+        Ok(result.rows_affected())
     }
 
-    pub(crate) async fn done(pool: &SqlitePool, id: i64) -> i64 {
+    pub(crate) async fn done(pool: &SqlitePool, id: i64) -> Result<i64> {
         let mut connection = pool.acquire().await.unwrap();
-        sqlx::query(Self::DONE)
+        let result = sqlx::query(Self::DONE)
             .bind(id)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+
+        Ok(result.last_insert_rowid())
     }
 
-    pub(crate) async fn undo(pool: &SqlitePool, id: i64) -> i64 {
+    pub(crate) async fn undo(pool: &SqlitePool, id: i64) -> Result<u64> {
         let mut connection = pool.acquire().await.unwrap();
-        sqlx::query(Self::UNDO)
+        let result = sqlx::query(Self::UNDO)
             .bind(id)
             .execute(&mut connection)
-            .await
-            .unwrap()
-            .last_insert_rowid()
+            .await?;
+
+        Ok(result.rows_affected())
     }
 }
 
-// Responder
 impl Responder for Todo {
-    fn respond_to(self, req: &HttpRequest) -> HttpResponse {
-        let body = serde_json::to_string_pretty(&self).unwrap();
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
+        let response = match serde_json::to_string(&self) {
+            Ok(body) => {
+                // Create response and set content type
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(body)
+            }
+            Err(fail) => HttpResponse::BadRequest().body(fail.to_string()),
+        };
 
-        // Create response and set content type
-        HttpResponse::Ok()
-            .content_type("application/json")
-            .body(body)
+        response
     }
 }

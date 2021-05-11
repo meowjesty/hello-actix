@@ -1,13 +1,15 @@
 use actix_web::{delete, get, post, put, web, Responder};
+use anyhow::Result;
 use sqlx::SqlitePool;
 
 use crate::model::{InputTodo, Todo};
 
+// TODO(alex): Figure out how to integrate anyhow error handling properly.
 #[get("/")]
-pub(crate) async fn index(pool: web::Data<SqlitePool>) -> impl Responder {
-    let todos = Todo::find_ongoing(pool.get_ref()).await;
-    let response = serde_json::to_string_pretty(&todos).unwrap();
-    response
+pub(crate) async fn index(pool: web::Data<SqlitePool>) -> Result<impl Responder> {
+    let todos = Todo::find_ongoing(pool.get_ref()).await?;
+    let response = serde_json::to_string_pretty(&todos)?;
+    Ok(response)
 }
 
 #[get("/todos")]
