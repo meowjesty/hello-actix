@@ -1,4 +1,4 @@
-use actix_web::{get, post, put, web, Responder, Result};
+use actix_web::{delete, get, post, put, web, Responder};
 use sqlx::SqlitePool;
 
 use crate::model::{InputTodo, Todo};
@@ -39,7 +39,7 @@ pub(crate) async fn create_todo(
     response.to_string()
 }
 
-#[post("/todos/{id}")]
+#[delete("/todos/{id}")]
 pub(crate) async fn delete_todo(pool: web::Data<SqlitePool>, id: web::Path<i64>) -> impl Responder {
     let response = Todo::delete(pool.get_ref(), *id).await;
     response.to_string()
@@ -55,20 +55,16 @@ pub(crate) async fn update_todo(
     response.to_string()
 }
 
-#[post("/todos/{id}/done")]
+#[post("/todos/{id}")]
 pub(crate) async fn done_todo(pool: web::Data<SqlitePool>, id: web::Path<i64>) -> impl Responder {
     let response = Todo::done(pool.get_ref(), *id).await;
     response.to_string()
 }
 
-#[get("/hello")]
-pub(crate) async fn hello() -> Result<String> {
-    Ok(format!("Hello from api!"))
-}
-
-#[get("/hello/{id}")]
-pub(crate) async fn hello_id(id: web::Path<u64>) -> Result<String> {
-    Ok(format!("Hello from api {}!", id))
+#[delete("/todos/undo/{id}")]
+pub(crate) async fn undo_todo(pool: web::Data<SqlitePool>, id: web::Path<i64>) -> impl Responder {
+    let response = Todo::undo(pool.get_ref(), *id).await;
+    response.to_string()
 }
 
 // function that will be called on new Application to configure routes for this module
@@ -80,4 +76,5 @@ pub(crate) fn todo_service(cfg: &mut web::ServiceConfig) {
     cfg.service(delete_todo);
     cfg.service(update_todo);
     cfg.service(done_todo);
+    cfg.service(undo_todo);
 }

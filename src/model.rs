@@ -26,6 +26,7 @@ impl Todo {
     const DELETE: &'static str = include_str!("./../databases/queries/delete.sql");
 
     const DONE: &'static str = include_str!("./../databases/queries/done.sql");
+    const UNDO: &'static str = include_str!("./../databases/queries/undo.sql");
 
     pub(crate) async fn create_database(pool: &SqlitePool) -> i64 {
         let mut connection = pool.acquire().await.unwrap();
@@ -95,6 +96,16 @@ impl Todo {
     pub(crate) async fn done(pool: &SqlitePool, id: i64) -> i64 {
         let mut connection = pool.acquire().await.unwrap();
         sqlx::query(Self::DONE)
+            .bind(id)
+            .execute(&mut connection)
+            .await
+            .unwrap()
+            .last_insert_rowid()
+    }
+
+    pub(crate) async fn undo(pool: &SqlitePool, id: i64) -> i64 {
+        let mut connection = pool.acquire().await.unwrap();
+        sqlx::query(Self::UNDO)
             .bind(id)
             .execute(&mut connection)
             .await

@@ -11,12 +11,12 @@ content-type: application/json
 
 ####
 
-# @name delete
-POST {{baseUrl}}/todos/1 HTTP/1.1
+# @name delete_todo
+DELETE {{baseUrl}}/todos/1 HTTP/1.1
 
 ####
 
-# @name update
+# @name update_todo
 PUT {{baseUrl}}/todos/2 HTTP/1.1
 content-type: application/json
 
@@ -42,8 +42,8 @@ GET {{baseUrl}}/todos/all HTTP/1.1
 
 ####
 
-# @name done
-POST {{baseUrl}}/todos/1/done HTTP/1.1
+# @name mark_done
+POST {{baseUrl}}/todos/1 HTTP/1.1
 
 ####
 
@@ -52,10 +52,6 @@ GET {{baseUrl}}/todos/1 HTTP/1.1
 
 ####
 
-# @name hello
-GET {{baseUrl}}/api/hello HTTP/1.1
+# @name undo_todo
+DELETE {{baseUrl}}/todos/undo/1 HTTP/1.1
 
-####
-
-# @name hello_id
-GET {{baseUrl}}/api/hello/10 HTTP/1.1
