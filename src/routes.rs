@@ -1,4 +1,4 @@
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder, ResponseError};
+use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use sqlx::SqlitePool;
 
 use crate::{
@@ -6,8 +6,6 @@ use crate::{
     model::{InputTodo, Todo},
 };
 
-// TODO(alex) [high] 2021-06-01: Using simple errors, but is it possible to still use the `?`
-// operator with `impl Responder`?
 #[get("/")]
 pub(crate) async fn index(pool: web::Data<SqlitePool>) -> Result<impl Responder, TodoError> {
     let todos = Todo::find_ongoing(pool.get_ref()).await?;
@@ -38,13 +36,15 @@ pub(crate) async fn find_by_id(
     Ok(response)
 }
 
+/// NOTE(alex): There is no json validation, this will be an error if the fields passed don't match
+/// what the struct has, but extra json fields are fine, and will be ignored.
 #[post("/todos")]
 pub(crate) async fn create_todo(
     pool: web::Data<SqlitePool>,
     input: web::Json<InputTodo>,
 ) -> Result<impl Responder, TodoError> {
-    let response = Todo::create(pool.get_ref(), &input).await?;
-    Ok(response.to_string())
+    let created_id = Todo::create(pool.get_ref(), &input).await?;
+    Ok(created_id.to_string())
 }
 
 #[delete("/todos/{id}")]
@@ -52,8 +52,15 @@ pub(crate) async fn delete_todo(
     pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, TodoError> {
-    let response = Todo::delete(pool.get_ref(), *id).await?;
-    Ok(response.to_string())
+    let num_modified = Todo::delete(pool.get_ref(), *id).await?;
+
+    if num_modified == 0 {
+        Ok(HttpResponse::NotModified().finish())
+    } else {
+        // TODO(alex) [high] 2021-06-01: This won't work, doesn't `u64` implement `Responder`?
+        // Ok(num_modified.to_string())
+        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+    }
 }
 
 #[put("/todos/{id}")]
@@ -62,8 +69,13 @@ pub(crate) async fn update_todo(
     id: web::Path<i64>,
     input: web::Json<InputTodo>,
 ) -> Result<impl Responder, TodoError> {
-    let response = Todo::update(pool.get_ref(), *id, &input).await?;
-    Ok(response.to_string())
+    let num_modified = Todo::update(pool.get_ref(), *id, &input).await?;
+
+    if num_modified == 0 {
+        Ok(HttpResponse::NotModified().finish())
+    } else {
+        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+    }
 }
 
 #[post("/todos/{id}")]
@@ -71,8 +83,13 @@ pub(crate) async fn done_todo(
     pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, TodoError> {
-    let response = Todo::done(pool.get_ref(), *id).await?;
-    Ok(response.to_string())
+    let created_id = Todo::done(pool.get_ref(), *id).await?;
+
+    if created_id == 0 {
+        Ok(HttpResponse::NotModified().finish())
+    } else {
+        Ok(HttpResponse::Ok().body(created_id.to_string()))
+    }
 }
 
 #[delete("/todos/undo/{id}")]
@@ -80,8 +97,13 @@ pub(crate) async fn undo_todo(
     pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, TodoError> {
-    let response = Todo::undo(pool.get_ref(), *id).await?;
-    Ok(response.to_string())
+    let num_modified = Todo::undo(pool.get_ref(), *id).await?;
+
+    if num_modified == 0 {
+        Ok(HttpResponse::NotModified().finish())
+    } else {
+        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+    }
 }
 
 // function that will be called on new Application to configure routes for this module

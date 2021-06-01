@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{fs::OpenOptions, net::SocketAddr, path::Path};
 
 use actix_web::{App, HttpServer};
 use log::info;
@@ -24,6 +24,12 @@ async fn main() -> std::io::Result<()> {
     let config: Config = serde_json::from_slice(config_file)?;
 
     // std::env::set_var("DATABASE_URL", config.database);
+    {
+        let _ = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&config.database.split("//").last().unwrap());
+    }
 
     // Create a connection pool
     //  for MySQL, use MySqlPoolOptions::new()
@@ -36,7 +42,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap();
 
-    Todo::create_database(&database_pool).await;
+    Todo::create_database(&database_pool).await.unwrap();
 
     let server = HttpServer::new(move || {
         App::new()

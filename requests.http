@@ -5,14 +5,26 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "Second todo",
+    "task": "Deletable todo",
     "details": "Even more details"
 }
 
 ####
 
+# @name create_invalid
+POST {{baseUrl}}/todos HTTP/1.1
+content-type: application/json
+
+{
+    "task": "Deletable todo",
+    "details": "Even more details",
+    "wrong": "No field here!"
+}
+
+####
+
 # @name delete_todo
-DELETE {{baseUrl}}/todos/1 HTTP/1.1
+DELETE {{baseUrl}}/todos/5 HTTP/1.1
 
 ####
 

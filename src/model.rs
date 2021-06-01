@@ -1,5 +1,4 @@
-use actix_web::{Error, HttpRequest, HttpResponse, Responder};
-use futures::future::{ready, Ready};
+use actix_web::{HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
@@ -62,7 +61,7 @@ impl Todo {
     }
 
     pub(crate) async fn create(pool: &SqlitePool, input: &InputTodo) -> Result<i64, TodoError> {
-        let mut connection = pool.acquire().await.unwrap();
+        let mut connection = pool.acquire().await?;
         let result = sqlx::query(Self::INSERT)
             .bind(&input.task)
             .bind(&input.details)
@@ -77,7 +76,7 @@ impl Todo {
         id: i64,
         input: &InputTodo,
     ) -> Result<u64, TodoError> {
-        let mut connection = pool.acquire().await.unwrap();
+        let mut connection = pool.acquire().await?;
         let result = sqlx::query(Self::UPDATE)
             .bind(&input.task)
             .bind(&input.details)
@@ -89,7 +88,7 @@ impl Todo {
     }
 
     pub(crate) async fn delete(pool: &SqlitePool, id: i64) -> Result<u64, TodoError> {
-        let mut connection = pool.acquire().await.unwrap();
+        let mut connection = pool.acquire().await?;
         let result = sqlx::query(Self::DELETE)
             .bind(id)
             .execute(&mut connection)
@@ -99,7 +98,7 @@ impl Todo {
     }
 
     pub(crate) async fn done(pool: &SqlitePool, id: i64) -> Result<i64, TodoError> {
-        let mut connection = pool.acquire().await.unwrap();
+        let mut connection = pool.acquire().await?;
         let result = sqlx::query(Self::DONE)
             .bind(id)
             .execute(&mut connection)
@@ -109,7 +108,7 @@ impl Todo {
     }
 
     pub(crate) async fn undo(pool: &SqlitePool, id: i64) -> Result<u64, TodoError> {
-        let mut connection = pool.acquire().await.unwrap();
+        let mut connection = pool.acquire().await?;
         let result = sqlx::query(Self::UNDO)
             .bind(id)
             .execute(&mut connection)
@@ -117,6 +116,12 @@ impl Todo {
 
         Ok(result.rows_affected())
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct TodoResponse {
+    todo: Todo,
+    modified: bool,
 }
 
 impl Responder for Todo {
