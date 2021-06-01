@@ -8,6 +8,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 use crate::routes::{index, todo_service};
 
+mod errors;
 mod model;
 mod routes;
 
