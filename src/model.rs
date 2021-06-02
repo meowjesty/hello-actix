@@ -13,13 +13,20 @@ pub(crate) struct Todo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct InputTodo {
-    task: String,
-    details: String,
+    pub(crate) task: String,
+    pub(crate) details: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct QueryTodo {
+    pub(crate) task: String,
 }
 
 impl Todo {
     const CREATE_DATABASE: &'static str =
         include_str!("./../databases/queries/create_database.sql");
+    const FIND_BY_PATTERN: &'static str =
+        include_str!("./../databases/queries/find_by_pattern.sql");
     const FIND_ONGOING: &'static str = include_str!("./../databases/queries/find_ongoing.sql");
     const FIND_ALL: &'static str = include_str!("./../databases/queries/find_all.sql");
     const FIND_BY_ID: &'static str = include_str!("./../databases/queries/find_by_id.sql");
@@ -37,6 +44,18 @@ impl Todo {
             .execute(&mut connection)
             .await?;
         Ok(result.rows_affected())
+    }
+
+    pub(crate) async fn find_by_pattern(
+        pool: &SqlitePool,
+        search: &str,
+    ) -> Result<Vec<Todo>, TodoError> {
+        let result = sqlx::query_as(Self::FIND_BY_PATTERN)
+            .bind(search)
+            .fetch_all(pool)
+            .await?;
+
+        Ok(result)
     }
 
     pub(crate) async fn find_ongoing(pool: &SqlitePool) -> Result<Vec<Todo>, TodoError> {

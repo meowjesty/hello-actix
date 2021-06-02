@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 
 use crate::{
     errors::TodoError,
-    model::{InputTodo, Todo},
+    model::{InputTodo, QueryTodo, Todo},
 };
 
 #[get("/")]
@@ -14,6 +14,20 @@ pub(crate) async fn index(pool: web::Data<SqlitePool>) -> Result<impl Responder,
 }
 
 #[get("/todos")]
+pub(crate) async fn find_by_pattern(
+    pool: web::Data<SqlitePool>,
+    pattern: web::Query<QueryTodo>,
+) -> Result<impl Responder, TodoError> {
+    // TODO(alex) [mid] 2021-06-02: Is it possible to not have `format` here and have the wildcard
+    // `%` be embedded in the `.sql` queue directly?
+    // - '%$1%' doesn't work;
+    // - %$1% doesn't work;
+    let todos = Todo::find_by_pattern(pool.get_ref(), &format!("%{}%", pattern.task)).await?;
+    let response = serde_json::to_string_pretty(&todos)?;
+    Ok(response)
+}
+
+#[get("/todos/ongoing")]
 pub(crate) async fn find_ongoing(pool: web::Data<SqlitePool>) -> Result<impl Responder, TodoError> {
     let todos = Todo::find_ongoing(pool.get_ref()).await?;
     let response = serde_json::to_string_pretty(&todos)?;
@@ -43,6 +57,10 @@ pub(crate) async fn create_todo(
     pool: web::Data<SqlitePool>,
     input: web::Json<InputTodo>,
 ) -> Result<impl Responder, TodoError> {
+    if input.task.trim().is_empty() {
+        return Err(TodoError::Validation("Task".to_string()));
+    }
+
     let created_id = Todo::create(pool.get_ref(), &input).await?;
     Ok(created_id.to_string())
 }
@@ -57,7 +75,8 @@ pub(crate) async fn delete_todo(
     if num_modified == 0 {
         Ok(HttpResponse::NotModified().finish())
     } else {
-        // TODO(alex) [high] 2021-06-01: This won't work, doesn't `u64` implement `Responder`?
+        // NOTE(alex): This doesn't work, rust expects it to be a `HttpResponse`, but we pass a
+        // string, and the type won´t check.
         // Ok(num_modified.to_string())
         Ok(HttpResponse::Ok().body(num_modified.to_string()))
     }
@@ -108,6 +127,7 @@ pub(crate) async fn undo_todo(
 
 // function that will be called on new Application to configure routes for this module
 pub(crate) fn todo_service(cfg: &mut web::ServiceConfig) {
+    cfg.service(find_by_pattern);
     cfg.service(find_ongoing);
     cfg.service(find_all);
     cfg.service(find_by_id);

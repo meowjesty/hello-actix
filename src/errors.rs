@@ -9,6 +9,9 @@ pub(crate) enum TodoError {
     #[error("Serde failed with `{0}`.")]
     SerdeJson(#[from] serde_json::Error),
 
+    #[error("Field `{0}` cannot be whitespace only.")]
+    Validation(String),
+
     #[error("Database error `{0}`.")]
     SqlX(#[from] sqlx::Error),
 

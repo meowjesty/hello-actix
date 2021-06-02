@@ -5,8 +5,19 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "Deletable todo",
+    "task": "%$1%",
     "details": "Even more details"
+}
+
+####
+
+# @name create_bad_request
+POST {{baseUrl}}/todos HTTP/1.1
+content-type: application/json
+
+{
+    "details": "Even more details",
+    "wrong": "No field here!"
 }
 
 ####
@@ -16,9 +27,20 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "Deletable todo",
+    "task": "",
     "details": "Even more details",
     "wrong": "No field here!"
+}
+
+####
+
+# @name create_malicious
+POST {{baseUrl}}/todos HTTP/1.1
+content-type: application/json
+
+{
+    "task": "delete * from Todo || (delete * from Todo) --;",
+    "details": "delete * from Todo;"
 }
 
 ####
@@ -45,7 +67,7 @@ GET {{baseUrl}}/ HTTP/1.1
 ####
 
 # @name find_ongoing
-GET {{baseUrl}}/todos HTTP/1.1
+GET {{baseUrl}}/todos/ongoing HTTP/1.1
 
 ####
 
@@ -67,3 +89,9 @@ GET {{baseUrl}}/todos/1 HTTP/1.1
 # @name undo_todo
 DELETE {{baseUrl}}/todos/undo/1 HTTP/1.1
 
+####
+
+# @name find_by_query
+GET {{baseUrl}}/todos?task=todo HTTP/1.1
+
+####
