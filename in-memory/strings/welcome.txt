@@ -1,0 +1,10 @@
+Learning actix by implementing a Todo service?!
+
+The API routes are:
+
+- GET '/': this welcome message;
+- GET '/tasks': get all tasks;
+- GET '/tasks/{id}': get task by {id};
+- POST '/tasks': insert new task;
+- DELETE '/tasks/{id}': delete task {id};
+- PUT '/tasks': update task;

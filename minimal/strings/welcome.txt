@@ -1,0 +1,5 @@
+Learning actix by implementing a Todo service?!
+
+The API routes are:
+
+- GET '/': this welcome message;

@@ -5,7 +5,7 @@ POST {{baseUrl}}/todos HTTP/1.1
 content-type: application/json
 
 {
-    "task": "%$1%",
+    "task": "First task",
     "details": "Even more details"
 }
 
