@@ -1,21 +1,25 @@
-drop view if exists OngoingTodo;
-drop table if exists Todo;
+drop view if exists OngoingTask;
+drop table if exists Task;
 drop table if exists Done;
-create table if not exists Todo (
+
+create table if not exists Task (
     id integer primary key,
-    task text not null,
+    title text not null,
     details text
 );
+
 create table if not exists Done (
-    todo_id int not null,
-    foreign key (todo_id) references Todo(id) on delete cascade
+    task_id int not null,
+    foreign key (task_id) references Task(id) on delete cascade
 );
-create view if not exists OngoingTodo as
-select Todo.id,
-    Todo.task,
-    Todo.details
-from Todo
-where Todo.id not in (
-        select todo_id
+
+create view if not exists OngoingTask as
+select Task.id,
+    Task.title,
+    Task.details
+from Task
+where
+    Task.id not in (
+        select task_id
         from Done
     );
