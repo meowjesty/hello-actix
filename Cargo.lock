@@ -1397,6 +1397,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqlite"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+]
+
+[[package]]
 name = "sqlx"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
