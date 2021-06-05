@@ -1,4 +1,4 @@
 select *
-from Todo
+from Task
 where
-    Todo.task like $1;
+    Task.title like $1;

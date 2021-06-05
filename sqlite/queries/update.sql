@@ -1,4 +1,4 @@
-update Todo
-set task = $1,
+update Task
+set title = $1,
     details = $2
-where Todo.id = $3
+where Task.id = $3

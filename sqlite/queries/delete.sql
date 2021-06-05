@@ -1,2 +1,2 @@
-delete from Todo
-where Todo.id = $1
+delete from Task
+where Task.id = $1

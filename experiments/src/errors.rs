@@ -3,9 +3,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub(crate) enum TodoError {
-    #[error("Requested id {:?} was not found.", .id)]
-    NotFound { id: u64 },
-
     #[error("Serde failed with `{0}`.")]
     SerdeJson(#[from] serde_json::Error),
 
@@ -14,9 +11,6 @@ pub(crate) enum TodoError {
 
     #[error("Database error `{0}`.")]
     SqlX(#[from] sqlx::Error),
-
-    #[error("Internal server error.")]
-    Internal,
 }
 
 impl ResponseError for TodoError {

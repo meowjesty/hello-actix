@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, net::SocketAddr, path::Path};
+use std::{fs::OpenOptions, net::SocketAddr};
 
 use actix_web::{App, HttpServer};
 use log::info;

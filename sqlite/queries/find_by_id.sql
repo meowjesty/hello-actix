@@ -1,3 +1,3 @@
 select *
-from Todo
-where Todo.id = $1
+from Task
+where Task.id = $1

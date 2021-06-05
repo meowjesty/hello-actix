@@ -5,32 +5,28 @@ use thiserror::Error;
 pub(crate) enum TaskError {
     #[error("`title` field of `Task` cannot be empty!")]
     EmptyTitle,
-
-    #[error("`{0}` id not found!")]
-    IdNotFound(u64),
 }
 
 #[derive(Debug, Error)]
 pub(crate) enum AppError {
     #[error("`{0}`")]
-    Task(TaskError),
+    Task(#[from] TaskError),
 
     #[error("`{0}`")]
     Database(#[from] sqlx::Error),
 
-    #[error("Internal server error!")]
-    Internal,
+    #[error("`{0}`")]
+    Json(#[from] serde_json::Error),
 }
 
 impl ResponseError for AppError {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
-            AppError::Internal => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Task(task_error) => match task_error {
                 TaskError::EmptyTitle => actix_web::http::StatusCode::BAD_REQUEST,
-                TaskError::IdNotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

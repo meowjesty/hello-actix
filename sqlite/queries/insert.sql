@@ -1,2 +1,2 @@
-insert into Todo (task, details)
+insert into Task (title, details)
 values ($1, $2);
