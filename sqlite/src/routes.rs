@@ -140,7 +140,6 @@ mod tests {
         body::{Body, ResponseBody},
         test, App,
     };
-    use serde_json::json;
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
     use super::*;

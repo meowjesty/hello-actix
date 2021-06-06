@@ -60,7 +60,7 @@ async fn main() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{http, test, web};
+    use actix_web::test;
 
     use super::*;
 
