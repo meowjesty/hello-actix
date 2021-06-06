@@ -1,12 +1,19 @@
 use std::{env, fs::OpenOptions};
 
+#[cfg(not(test))]
+const DATABASE_FILENAME: &'static str = "sqlite_todo.db";
+
+#[cfg(test)]
+const DATABASE_FILENAME: &'static str = "sqlite_todo.test.db";
+
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=queries/create_database.sql");
 
+    println!("DATABASE_FILENAME is {}", DATABASE_FILENAME);
+
     let out_dir = env::var("OUT_DIR").unwrap();
-    let database_filename = "sqlite_todo.db";
-    let database_file = &format!("{}/{}", out_dir, database_filename);
+    let database_file = &format!("{}/{}", out_dir, DATABASE_FILENAME);
     let database_url = &format!("sqlite://{}", database_file);
 
     {

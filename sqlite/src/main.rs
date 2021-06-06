@@ -57,3 +57,28 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{http, test, web};
+
+    use super::*;
+
+    #[actix_rt::test]
+    async fn test_index_get() {
+        let mut app = test::init_service(App::new().service(index)).await;
+        let request = test::TestRequest::get().uri("/").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    async fn test_index_post() {
+        let mut app = test::init_service(App::new().service(index)).await;
+        let request = test::TestRequest::post().uri("/").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_client_error());
+    }
+}

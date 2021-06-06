@@ -133,3 +133,213 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
     cfg.service(find_by_pattern);
     cfg.service(find_by_id);
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{
+        body::{Body, ResponseBody},
+        test, App,
+    };
+    use serde_json::json;
+    use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+
+    use super::*;
+    use crate::create_database;
+
+    trait BodyTest {
+        fn as_str(&self) -> &str;
+    }
+
+    impl BodyTest for ResponseBody<Body> {
+        fn as_str(&self) -> &str {
+            match self {
+                ResponseBody::Body(ref b) => match b {
+                    Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
+                    _ => panic!(),
+                },
+                ResponseBody::Other(ref b) => match b {
+                    Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
+                    _ => panic!(),
+                },
+            }
+        }
+    }
+
+    async fn setup_data() -> Pool<Sqlite> {
+        let database_url = env!("DATABASE_URL");
+
+        let database_pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        create_database(&database_pool).await.unwrap();
+
+        database_pool
+    }
+
+    #[actix_rt::test]
+    async fn test_insert_valid() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(App::new().data(database_pool).service(insert)).await;
+
+        let valid_insert = InsertTask {
+            non_empty_title: "Valid title".to_string(),
+            details: "details".to_string(),
+        };
+
+        let request = test::TestRequest::post()
+            .uri("/tasks")
+            .set_json(&valid_insert)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    async fn test_insert_invalid_title() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(App::new().data(database_pool).service(insert)).await;
+
+        let invalid_insert = InsertTask {
+            non_empty_title: " \n\t".to_string(),
+            details: "details".to_string(),
+        };
+
+        let request = test::TestRequest::post()
+            .uri("/tasks")
+            .set_json(&invalid_insert)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_client_error());
+    }
+
+    #[actix_rt::test]
+    async fn test_update_valid() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(
+            App::new()
+                .data(database_pool)
+                .service(insert)
+                .service(update),
+        )
+        .await;
+
+        let task = InsertTask {
+            non_empty_title: "Valid title".to_string(),
+            details: "details".to_string(),
+        };
+
+        // NOTE(alex): Insert before updating.
+        let request = test::TestRequest::post()
+            .uri("/tasks")
+            .set_json(&task)
+            .to_request();
+        let mut response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_success());
+
+        let id: i64 = response.take_body().as_str().parse().unwrap();
+        let valid_update = UpdateTask {
+            id,
+            new_title: "Updated title".to_string(),
+            details: "updated details".to_string(),
+        };
+
+        // NOTE(alex): Update
+        let request = test::TestRequest::put()
+            .uri("/tasks")
+            .set_json(&valid_update)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    async fn test_update_invalid_title() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(
+            App::new()
+                .data(database_pool)
+                .service(insert)
+                .service(update),
+        )
+        .await;
+
+        let task = InsertTask {
+            non_empty_title: "Title".to_string(),
+            details: "details".to_string(),
+        };
+
+        // NOTE(alex): Insert before updating.
+        let request = test::TestRequest::post()
+            .uri("/tasks")
+            .set_json(&task)
+            .to_request();
+        let mut response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_success());
+
+        let id: i64 = response.take_body().as_str().parse().unwrap();
+        let invalid_update = UpdateTask {
+            id,
+            new_title: " \n\t".to_string(),
+            details: "updated details".to_string(),
+        };
+
+        // NOTE(alex): Update
+        let request = test::TestRequest::put()
+            .uri("/tasks")
+            .set_json(&invalid_update)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_client_error());
+    }
+
+    #[actix_rt::test]
+    async fn test_delete() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(
+            App::new()
+                .data(database_pool)
+                .service(insert)
+                .service(delete),
+        )
+        .await;
+
+        let task = InsertTask {
+            non_empty_title: "Valid title".to_string(),
+            details: "details".to_string(),
+        };
+
+        // NOTE(alex): Insert
+        let request = test::TestRequest::post()
+            .uri("/tasks")
+            .set_json(&task)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_success());
+
+        // NOTE(alex): Delete
+        let request = test::TestRequest::delete()
+            .uri("/tasks/1")
+            // TODO(alex) [low] 2021-06-06: Why doesn't this work?
+            // .uri("/tasks")
+            // .param("id", "1")
+            .to_request();
+
+        let response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    async fn test_delete_nothing() {
+        let database_pool = setup_data().await;
+        let mut app = test::init_service(App::new().data(database_pool).service(delete)).await;
+
+        let request = test::TestRequest::delete().uri("/tasks/1000").to_request();
+        let response = test::call_service(&mut app, request).await;
+        assert!(response.status().is_redirection());
+    }
+}

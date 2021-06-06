@@ -17,9 +17,9 @@ const UNDO: &'static str = include_str!("./../queries/undo.sql");
 
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub(crate) struct Task {
-    id: i64,
-    title: String,
-    details: String,
+    pub(crate) id: i64,
+    pub(crate) title: String,
+    pub(crate) details: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ pub(crate) struct InsertTask {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct UpdateTask {
-    id: i64,
+    pub(crate) id: i64,
     pub(crate) new_title: String,
     pub(crate) details: String,
 }
