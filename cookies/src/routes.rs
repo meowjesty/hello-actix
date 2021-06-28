@@ -136,8 +136,6 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-
     use actix_web::{
         body::{Body, ResponseBody},
         test, App,

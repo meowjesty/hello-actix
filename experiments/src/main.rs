@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
-            .data(database_pool.clone())
+            .app_data(database_pool.clone())
             .service(index)
             .configure(todo_service)
         // WARNING(alex): Matching order matters, if `hello_scope` is put after `todos`, then it

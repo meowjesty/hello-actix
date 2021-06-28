@@ -52,9 +52,9 @@ impl ResponseError for AppError {
         }
     }
 
-    fn error_response(&self) -> BaseHttpResponse<Body> {
+    fn error_response(&self) -> HttpResponse {
         let status_code = self.status_code();
-        let response = BaseHttpResponse::build(status_code).body(self.to_string());
+        let response = HttpResponse::build(status_code).body(self.to_string());
         response
     }
 }

@@ -4,5 +4,6 @@ members = [
     "minimal",
     "in-memory",
     "sqlite",
+    "cookies",
     "experiments",
 ]

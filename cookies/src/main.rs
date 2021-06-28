@@ -1,5 +1,7 @@
-use actix_web::{get, App, HttpResponse, HttpServer};
+use actix_session::{CookieSession, Session};
+use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use errors::AppError;
+use log::info;
 use routes::task_service;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
@@ -13,11 +15,18 @@ const WELCOME_MSG: &'static str = include_str!("./../strings/welcome.txt");
 const CREATE_DATABASE: &'static str = include_str!("./../queries/create_database.sql");
 
 #[get("/")]
-async fn index() -> HttpResponse {
+async fn index(session: Session) -> Result<HttpResponse, AppError> {
+    if let Some(count) = session.get::<i32>("counter")? {
+        info!("SESSION counter: {}", count);
+        session.insert("counter", count + 1)?;
+    } else {
+        session.insert("counter", 1)?;
+    }
+
     let response = HttpResponse::Ok()
         .content_type("text/html; charset=UTF-8")
         .body(WELCOME_MSG);
-    response
+    Ok(response)
 }
 
 /// NOTE(alex): This function should be part of some setup script, it's here for convenience. It
@@ -32,8 +41,13 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
     Ok(result.rows_affected().to_string())
 }
 
+// TODO(alex) [mid] 2021-06-21: actix-web v3 uses tokio 0.2, sqlx expects tokio 1.0, so we get an
+// error when starting the app.
+// https://stackoverflow.com/questions/66119865/how-do-i-use-actix-web-3-and-rusoto-0-46-together/66120852#66120852
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
     let address = env!("ADDRESS");
     let database_url = env!("DATABASE_URL");
 
@@ -52,6 +66,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(database_pool.clone())
             .service(index)
             .configure(task_service)
+            .wrap(CookieSession::signed(&[0; 32]).secure(false))
+            .wrap(middleware::Logger::default())
     })
     .bind(address)?
     .run()

@@ -152,7 +152,7 @@ impl Responder for Todo {
                     .content_type("application/json")
                     .body(body)
             }
-            Err(fail) => HttpResponse::from_error(TodoError::from(fail).into()),
+            Err(fail) => HttpResponse::from_error(TodoError::from(fail)),
         };
 
         response

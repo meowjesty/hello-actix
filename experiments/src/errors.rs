@@ -1,4 +1,4 @@
-use actix_web::{body::Body, BaseHttpResponse, ResponseError};
+use actix_web::{HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,9 +18,9 @@ impl ResponseError for TodoError {
         actix_web::http::StatusCode::INTERNAL_SERVER_ERROR
     }
 
-    fn error_response(&self) -> BaseHttpResponse<Body> {
+    fn error_response(&self) -> HttpResponse {
         let status_code = self.status_code();
-        let response = BaseHttpResponse::build(status_code).body(self.to_string());
+        let response = HttpResponse::build(status_code).body(self.to_string());
         response
     }
 }

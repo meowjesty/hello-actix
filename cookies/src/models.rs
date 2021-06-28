@@ -1,8 +1,12 @@
-use actix_web::{HttpRequest, HttpResponse, Responder};
+use actix_web::{dev::Payload, error, web, FromRequest, HttpRequest, HttpResponse, Responder};
+use futures::{
+    future::{err, join, ok, ready, AndThen, MapOkOrElse, Ready},
+    Future, StreamExt, TryFutureExt,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::errors::AppError;
+use crate::errors::{AppError, TaskError};
 
 const FIND_BY_PATTERN: &'static str = include_str!("./../queries/find_by_pattern.sql");
 const FIND_ONGOING: &'static str = include_str!("./../queries/find_ongoing.sql");
