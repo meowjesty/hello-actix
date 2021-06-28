@@ -11,8 +11,8 @@ async fn insert(
     db_pool: web::Data<SqlitePool>,
     input: InsertTask,
 ) -> Result<impl Responder, AppError> {
-    let created_id = input.insert(db_pool.get_ref()).await?;
-    Ok(created_id.to_string())
+    let task = input.insert(db_pool.get_ref()).await?;
+    Ok(HttpResponse::Created().json(task))
 }
 
 #[put("/tasks")]
@@ -25,7 +25,7 @@ async fn update(
     if num_modified == 0 {
         Ok(HttpResponse::NotModified().finish())
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Created().body(num_modified.to_string()))
     }
 }
 
@@ -56,7 +56,7 @@ async fn done(
     if created_id == 0 {
         Ok(HttpResponse::NotModified().finish())
     } else {
-        Ok(HttpResponse::Ok().body(created_id.to_string()))
+        Ok(HttpResponse::Created().body(created_id.to_string()))
     }
 }
 

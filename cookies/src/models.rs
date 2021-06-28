@@ -23,6 +23,8 @@ const DELETE: &'static str = include_str!("./../queries/delete.sql");
 const COMPLETED: &'static str = include_str!("./../queries/done.sql");
 const UNDO: &'static str = include_str!("./../queries/undo.sql");
 
+// TODO(alex) [low] 2021-06-28: Most of these `pub(crate)` are here because of tests that are in
+// other modules, hos do I solve this?
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub(crate) struct Task {
     pub(crate) id: i64,
@@ -50,7 +52,7 @@ pub(crate) struct QueryTask {
 }
 
 impl InsertTask {
-    pub(crate) async fn insert(&self, db_pool: &SqlitePool) -> Result<i64, AppError> {
+    pub(crate) async fn insert(self, db_pool: &SqlitePool) -> Result<Task, AppError> {
         let mut connection = db_pool.acquire().await?;
         let result = sqlx::query(INSERT)
             .bind(&self.non_empty_title)
@@ -58,7 +60,13 @@ impl InsertTask {
             .execute(&mut connection)
             .await?;
 
-        Ok(result.last_insert_rowid())
+        let task = Task {
+            id: result.last_insert_rowid(),
+            title: self.non_empty_title,
+            details: self.details,
+        };
+
+        Ok(task)
     }
 
     fn validate(self) -> Result<Self, TaskError> {
@@ -71,7 +79,7 @@ impl InsertTask {
 }
 
 impl UpdateTask {
-    pub(crate) async fn update(&self, db_pool: &SqlitePool) -> Result<u64, AppError> {
+    pub(crate) async fn update(self, db_pool: &SqlitePool) -> Result<u64, AppError> {
         let mut connection = db_pool.acquire().await?;
         let result = sqlx::query(UPDATE)
             .bind(&self.new_title)
@@ -103,14 +111,14 @@ impl Task {
         Ok(result.rows_affected())
     }
 
-    pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<i64, AppError> {
+    pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<u64, AppError> {
         let mut connection = pool.acquire().await?;
         let result = sqlx::query(COMPLETED)
             .bind(task_id)
             .execute(&mut connection)
             .await?;
 
-        Ok(result.last_insert_rowid())
+        Ok(result.rows_affected())
     }
 
     pub(crate) async fn undo(db_pool: &SqlitePool, task_id: i64) -> Result<u64, AppError> {
