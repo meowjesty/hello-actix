@@ -23,12 +23,8 @@ async fn insert(
 #[put("/tasks")]
 async fn update(
     db_pool: web::Data<SqlitePool>,
-    input: web::Json<UpdateTask>,
+    input: UpdateTask,
 ) -> Result<HttpResponse, AppError> {
-    if input.new_title.trim().is_empty() {
-        return Err(TaskError::EmptyTitle.into());
-    }
-
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {

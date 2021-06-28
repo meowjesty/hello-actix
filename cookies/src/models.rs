@@ -82,6 +82,14 @@ impl UpdateTask {
 
         Ok(result.rows_affected())
     }
+
+    fn validate(self) -> Result<Self, TaskError> {
+        if self.new_title.trim().is_empty() {
+            Err(TaskError::EmptyTitle)
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 impl Task {
@@ -180,6 +188,24 @@ impl FromRequest for InsertTask {
             .limit(4056)
             .map(|res: Result<InsertTask, _>| match res {
                 Ok(insert_task) => insert_task.validate().map_err(|fail| AppError::from(fail)),
+                Err(fail) => Err(AppError::from(fail)),
+            })
+            .boxed_local()
+    }
+}
+
+impl FromRequest for UpdateTask {
+    type Config = ();
+
+    type Error = AppError;
+
+    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+        JsonBody::new(req, payload, None)
+            .limit(4056)
+            .map(|res: Result<UpdateTask, _>| match res {
+                Ok(update_task) => update_task.validate().map_err(|fail| AppError::from(fail)),
                 Err(fail) => Err(AppError::from(fail)),
             })
             .boxed_local()
