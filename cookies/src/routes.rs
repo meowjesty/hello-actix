@@ -9,13 +9,8 @@ use crate::{
 #[post("/tasks")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
-    // input: web::Json<InsertTask>,
     input: InsertTask,
 ) -> Result<impl Responder, AppError> {
-    if input.non_empty_title.trim().is_empty() {
-        return Err(TaskError::EmptyTitle.into());
-    }
-
     let created_id = input.insert(db_pool.get_ref()).await?;
     Ok(created_id.to_string())
 }

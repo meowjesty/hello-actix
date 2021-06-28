@@ -36,3 +36,15 @@ Content-Type: application/json
 
 ####
 
+# @name update_invalid_id
+PUT {{baseUrl}}/tasks HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": "",
+    "new_title": "Todo Updated",
+    "details": ""
+}
+
+####
+
