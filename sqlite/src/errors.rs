@@ -23,7 +23,7 @@ impl ResponseError for AppError {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             AppError::Task(task_error) => match task_error {
-                TaskError::EmptyTitle => actix_web::http::StatusCode::BAD_REQUEST,
+                TaskError::EmptyTitle => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
