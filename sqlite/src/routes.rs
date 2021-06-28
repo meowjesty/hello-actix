@@ -136,11 +136,10 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
 
     use actix_web::{
         body::{Body, ResponseBody},
-        test, App,
+        test, web, App,
     };
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
@@ -166,7 +165,7 @@ mod tests {
         }
     }
 
-    async fn setup_data() -> Pool<Sqlite> {
+    async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
             .filename(env!("DATABASE_FILE"))
             .create_if_missing(true);
@@ -179,13 +178,13 @@ mod tests {
 
         create_database(&database_pool).await.unwrap();
 
-        database_pool
+        web::Data::new(database_pool)
     }
 
     #[actix_rt::test]
     async fn test_insert_valid() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
+        let data = setup_data().await;
+        let mut app = test::init_service(App::new().app_data(data).service(insert)).await;
 
         let valid_insert = InsertTask {
             non_empty_title: "Valid title".to_string(),
