@@ -1,4 +1,4 @@
-use actix_web::{body::Body, error::JsonPayloadError, HttpResponse, ResponseError};
+use actix_web::{error::JsonPayloadError, HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

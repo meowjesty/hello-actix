@@ -1,4 +1,4 @@
-use actix_web::{body::Body, BaseHttpResponse, HttpResponse, ResponseError};
+use actix_web::{HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

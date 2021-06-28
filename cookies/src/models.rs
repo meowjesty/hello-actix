@@ -1,12 +1,8 @@
 use actix_web::{
     dev::{JsonBody, Payload},
-    error, web, FromRequest, HttpRequest, HttpResponse, Responder,
+    FromRequest, HttpRequest, HttpResponse, Responder,
 };
-use futures::{
-    future::{err, join, ok, ready, AndThen, LocalBoxFuture, MapOkOrElse, Ready},
-    Future, FutureExt, StreamExt, TryFutureExt,
-};
-use log::{debug, info};
+use futures::{future::LocalBoxFuture, FutureExt};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 

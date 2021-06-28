@@ -85,22 +85,13 @@ async fn undo(
 #[get("/tasks")]
 async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_all(db_pool.get_ref()).await?;
-
-    // NOTE(alex): For times when we want to convert `Vec<T>` into an `impl Responder`, this
-    // requires creating a new wrapper type such as `struct TList(Vec<T>)`, otherwise rust doesn't
-    // allow implementing a trait `Responder` for a type not defined in this crate.
-    // Bonus: implement `Deref` to avoid having `tlist.0.push` throughout your code.
-    //
-    // I'll be taking the `to_string` route here to avoid adding more types, at least for now.
-    let response = serde_json::to_string_pretty(&tasks)?;
-    Ok(response)
+    Ok(HttpResponse::Found().json(&tasks))
 }
 
 #[get("/tasks/ongoing")]
 async fn find_ongoing(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_ongoing(db_pool.get_ref()).await?;
-    let response = serde_json::to_string_pretty(&tasks)?;
-    Ok(response)
+    Ok(HttpResponse::Found().json(&tasks))
 }
 
 #[get("/tasks")]
@@ -109,8 +100,7 @@ async fn find_by_pattern(
     pattern: web::Query<QueryTask>,
 ) -> Result<impl Responder, AppError> {
     let tasks = Task::find_by_pattern(db_pool.get_ref(), &format!("%{}%", pattern.title)).await?;
-    let response = serde_json::to_string_pretty(&tasks)?;
-    Ok(response)
+    Ok(HttpResponse::Found().json(&tasks))
 }
 
 #[get("/tasks/{id}")]

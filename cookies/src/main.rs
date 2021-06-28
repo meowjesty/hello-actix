@@ -1,7 +1,7 @@
 use actix_session::{CookieSession, Session};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use errors::AppError;
-use log::{debug, info};
+use log::info;
 use routes::task_service;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
