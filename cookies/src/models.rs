@@ -1,8 +1,12 @@
-use actix_web::{dev::Payload, error, web, FromRequest, HttpRequest, HttpResponse, Responder};
-use futures::{
-    future::{err, join, ok, ready, AndThen, MapOkOrElse, Ready},
-    Future, StreamExt, TryFutureExt,
+use actix_web::{
+    dev::{JsonBody, Payload},
+    error, web, FromRequest, HttpRequest, HttpResponse, Responder,
 };
+use futures::{
+    future::{err, join, ok, ready, AndThen, LocalBoxFuture, MapOkOrElse, Ready},
+    Future, FutureExt, StreamExt, TryFutureExt,
+};
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
@@ -55,6 +59,14 @@ impl InsertTask {
             .await?;
 
         Ok(result.last_insert_rowid())
+    }
+
+    fn validate(self) -> Result<Self, TaskError> {
+        if self.non_empty_title.trim().is_empty() {
+            Err(TaskError::EmptyTitle)
+        } else {
+            Ok(self)
+        }
     }
 }
 
@@ -153,5 +165,23 @@ impl Responder for Task {
         };
 
         response
+    }
+}
+
+impl FromRequest for InsertTask {
+    type Config = ();
+
+    type Error = AppError;
+
+    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+        JsonBody::new(req, payload, None)
+            .limit(4056)
+            .map(|res: Result<InsertTask, _>| match res {
+                Ok(insert_task) => insert_task.validate().map_err(|fail| AppError::from(fail)),
+                Err(fail) => Err(AppError::from(fail)),
+            })
+            .boxed_local()
     }
 }

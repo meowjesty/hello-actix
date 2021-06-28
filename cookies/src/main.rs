@@ -1,7 +1,7 @@
 use actix_session::{CookieSession, Session};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use errors::AppError;
-use log::info;
+use log::{debug, info};
 use routes::task_service;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
@@ -48,12 +48,13 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let address = env!("ADDRESS");
-    let database_url = env!("DATABASE_URL");
+    let db_options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(env!("DATABASE_FILE"))
+        .create_if_missing(true);
 
     let database_pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(database_url)
+        .connect_with(db_options)
         .await
         .unwrap();
 
@@ -61,15 +62,17 @@ async fn main() -> std::io::Result<()> {
         create_database(&database_pool).await.unwrap();
     }
 
+    let data = actix_web::web::Data::new(database_pool);
+
     HttpServer::new(move || {
         App::new()
-            .app_data(database_pool.clone())
+            .app_data(data.clone())
             .service(index)
             .configure(task_service)
             .wrap(CookieSession::signed(&[0; 32]).secure(false))
             .wrap(middleware::Logger::default())
     })
-    .bind(address)?
+    .bind(env!("ADDRESS"))?
     .run()
     .await
 }

@@ -1,4 +1,4 @@
-use actix_web::{body::Body, HttpResponse, ResponseError};
+use actix_web::{body::Body, error::JsonPayloadError, HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -20,6 +20,9 @@ pub(crate) enum AppError {
 
     #[error("`{0}`")]
     Actix(#[from] actix_web::Error),
+
+    #[error("`{0}`")]
+    Payload(#[from] JsonPayloadError),
 }
 
 impl ResponseError for AppError {
@@ -31,6 +34,7 @@ impl ResponseError for AppError {
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Actix(fail) => fail.as_response_error().status_code(),
+            AppError::Payload(fail) => fail.error_response().status(),
         }
     }
 

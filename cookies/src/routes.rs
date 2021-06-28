@@ -9,7 +9,8 @@ use crate::{
 #[post("/tasks")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
-    input: web::Json<InsertTask>,
+    // input: web::Json<InsertTask>,
+    input: InsertTask,
 ) -> Result<impl Responder, AppError> {
     if input.non_empty_title.trim().is_empty() {
         return Err(TaskError::EmptyTitle.into());
@@ -165,11 +166,12 @@ mod tests {
     }
 
     async fn setup_data() -> Pool<Sqlite> {
-        let database_url = env!("DATABASE_URL");
+        let db_options = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(env!("DATABASE_FILE"))
+            .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect(database_url)
+            .connect_with(db_options)
             .await
             .unwrap();
 
