@@ -130,7 +130,7 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 mod tests {
     use actix_web::{
         body::{Body, ResponseBody},
-        test, App,
+        test, web, App,
     };
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
@@ -156,7 +156,7 @@ mod tests {
         }
     }
 
-    async fn setup_data() -> Pool<Sqlite> {
+    async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
             .filename(env!("DATABASE_FILE"))
             .create_if_missing(true);
@@ -169,13 +169,13 @@ mod tests {
 
         create_database(&database_pool).await.unwrap();
 
-        database_pool
+        web::Data::new(database_pool)
     }
 
     #[actix_rt::test]
     async fn test_insert_valid() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
+        let data = setup_data().await;
+        let mut app = test::init_service(App::new().app_data(data.clone()).service(insert)).await;
 
         let valid_insert = InsertTask {
             non_empty_title: "Valid title".to_string(),
@@ -235,17 +235,16 @@ mod tests {
         assert!(response.status().is_success());
 
         // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let id: i64 = match response.into_body() {
+        let task: Task = match response.into_body() {
             actix_web::body::AnyBody::Bytes(bytes) => {
-                let str = std::str::from_utf8(&*bytes).unwrap();
-                str.parse().unwrap()
+                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
             }
             _ => panic!("Unexpected body!"),
         };
         let valid_update = UpdateTask {
-            id,
-            new_title: "Updated title".to_string(),
-            details: "updated details".to_string(),
+            id: task.id,
+            new_title: format!("{} Updated", task.title),
+            details: format!("{} Updated", task.details),
         };
 
         // NOTE(alex): Update
@@ -282,17 +281,16 @@ mod tests {
         assert!(response.status().is_success());
 
         // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let id: i64 = match response.into_body() {
+        let task: Task = match response.into_body() {
             actix_web::body::AnyBody::Bytes(bytes) => {
-                let str = std::str::from_utf8(&*bytes).unwrap();
-                str.parse().unwrap()
+                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
             }
             _ => panic!("Unexpected body!"),
         };
         let invalid_update = UpdateTask {
-            id,
+            id: task.id,
             new_title: " \n\t".to_string(),
-            details: "updated details".to_string(),
+            details: format!("{} Updated", task.details),
         };
 
         // NOTE(alex): Update
