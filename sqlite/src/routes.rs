@@ -167,11 +167,13 @@ mod tests {
     }
 
     async fn setup_data() -> Pool<Sqlite> {
-        let database_url = env!("DATABASE_URL");
+        let db_options = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(env!("DATABASE_FILE"))
+            .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
             .max_connections(1)
-            .connect(database_url)
+            .connect_with(db_options)
             .await
             .unwrap();
 

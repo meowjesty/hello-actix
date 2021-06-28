@@ -12,6 +12,8 @@ serde = { version = "*", features = ["derive"] }
 serde_json = { version = "*" }
 thiserror = "*"
 sqlx = { version = "*", features = [ "runtime-actix-rustls", "sqlite" ] }
+env_logger = "*"
+log = "*"
 
 [dev-dependencies]
 actix-rt = "*"

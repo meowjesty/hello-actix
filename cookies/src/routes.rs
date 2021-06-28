@@ -162,6 +162,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
+            .max_connections(1)
             .connect_with(db_options)
             .await
             .unwrap();

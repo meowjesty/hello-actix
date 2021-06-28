@@ -1584,6 +1584,8 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
+ "env_logger",
+ "log",
  "serde",
  "serde_json",
  "sqlx",
