@@ -1,6 +1,5 @@
 use actix_session::Session;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use log::info;
 use sqlx::SqlitePool;
 
 use crate::{
@@ -97,7 +96,16 @@ async fn find_by_pattern(
     Ok(HttpResponse::Found().json(&tasks))
 }
 
-#[get("/tasks/{id}")]
+/// NOTE(alex): Regex to match only digits, otherwise it matches the "/tasks/favorite" find route.
+/// This issue may be solved in one of two ways:
+///
+/// 1. Include a regex or a `guard` to check which route is the best representative for this type of
+/// request;
+/// 2. Order the routes during setup in a way that avoids conflicts, such as a `{id}` pattern, which
+// is the equivalent of the `[^/]+` regex.
+///
+/// There is a 3rd way of sorts, which boils down to: avoid possible route conflicting paths.
+#[get("/tasks/{id:\\d+}")]
 async fn find_by_id(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
@@ -106,28 +114,37 @@ async fn find_by_id(
     Ok(task)
 }
 
+const FAVORITE_TASK_STR: &'static str = "favorite_task";
+
 #[get("/tasks/favorite/{id}")]
 async fn favorite(
     db_pool: web::Data<SqlitePool>,
     session: Session,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    if let Some(task) = session.get::<Task>("favorite_task")? {
-        info!("favorite task exists {:#?}", task);
+    if let Some(old) = session.remove(FAVORITE_TASK_STR) {
+        let old_favorite: Task = serde_json::from_str(&old)?;
 
-        // NOTE(alex): Unfavorite when the user tries to favorite the same id.
-        if task.id == *id {
-            session.remove("favorite_task");
-            Ok(HttpResponse::Found().json(task))
+        if old_favorite.id == *id {
+            // NOTE(alex): Just remove the task, this is basically "unfavorite".
+            Ok(HttpResponse::NoContent().finish())
         } else {
-            let task = Task::find_by_id(&db_pool, *id).await?;
-            session.insert("favorite_task", task.clone())?;
-            Ok(HttpResponse::Found().json(task))
+            match Task::find_by_id(&db_pool, *id).await? {
+                Some(task) => {
+                    session.insert(FAVORITE_TASK_STR, task.clone())?;
+                    Ok(HttpResponse::Found().json(task))
+                }
+                None => Err(TaskError::NotFound(*id).into()),
+            }
         }
     } else {
-        let task = Task::find_by_id(&db_pool, *id).await?;
-        session.insert("favorite_task", task.clone())?;
-        Ok(HttpResponse::Found().json(task))
+        match Task::find_by_id(&db_pool, *id).await? {
+            Some(task) => {
+                session.insert(FAVORITE_TASK_STR, task.clone())?;
+                Ok(HttpResponse::Found().json(task))
+            }
+            None => Err(TaskError::NoneFavorite.into()),
+        }
     }
 }
 
@@ -150,8 +167,13 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
     cfg.service(find_ongoing);
     cfg.service(find_by_pattern);
     cfg.service(find_by_id);
+    cfg.service(favorite);
+    cfg.service(find_favorite);
 }
 
+// NOTE(alex): Binary crates cannot use the integration test convention of having a separate `tests`
+// folder living alongside `src`. To have proper testing (smaller file size) you could create a
+// library crate, and move the implementation and tests there.
 #[cfg(test)]
 mod tests {
     use actix_web::{

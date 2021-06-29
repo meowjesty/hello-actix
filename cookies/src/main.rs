@@ -41,9 +41,6 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
     Ok(result.rows_affected().to_string())
 }
 
-// TODO(alex) [mid] 2021-06-21: actix-web v3 uses tokio 0.2, sqlx expects tokio 1.0, so we get an
-// error when starting the app.
-// https://stackoverflow.com/questions/66119865/how-do-i-use-actix-web-3-and-rusoto-0-46-together/66120852#66120852
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();

@@ -6,7 +6,10 @@ pub(crate) enum TaskError {
     #[error("`title` field of `Task` cannot be empty!")]
     EmptyTitle,
 
-    #[error("No favorite `Task` was found!")]
+    #[error("Could not find any `Task` for id: `{0}`!")]
+    NotFound(i64),
+
+    #[error("You have not favorited any `Task` yet!")]
     NoneFavorite,
 }
 
@@ -33,6 +36,7 @@ impl ResponseError for AppError {
         match self {
             AppError::Task(task_error) => match task_error {
                 TaskError::EmptyTitle => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                TaskError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
                 TaskError::NoneFavorite => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,

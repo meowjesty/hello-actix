@@ -1,0 +1,14 @@
+@baseUrl = http://127.0.0.1:8080
+
+# @name favorite
+GET {{baseUrl}}/tasks/favorite/1 HTTP/1.1
+
+####
+
+# @name favorite_invalid
+GET {{baseUrl}}/tasks/favorite/10000 HTTP/1.1
+
+####
+
+# @name find_favorite
+GET {{baseUrl}}/tasks/favorite HTTP/1.1
