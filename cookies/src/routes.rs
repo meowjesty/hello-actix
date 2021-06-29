@@ -1,8 +1,10 @@
+use actix_session::Session;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use log::info;
 use sqlx::SqlitePool;
 
 use crate::{
-    errors::AppError,
+    errors::{AppError, TaskError},
     models::{InsertTask, QueryTask, Task, UpdateTask},
 };
 
@@ -102,6 +104,40 @@ async fn find_by_id(
 ) -> Result<impl Responder, AppError> {
     let task = Task::find_by_id(db_pool.get_ref(), *id).await?;
     Ok(task)
+}
+
+#[get("/tasks/favorite/{id}")]
+async fn favorite(
+    db_pool: web::Data<SqlitePool>,
+    session: Session,
+    id: web::Path<i64>,
+) -> Result<impl Responder, AppError> {
+    if let Some(task) = session.get::<Task>("favorite_task")? {
+        info!("favorite task exists {:#?}", task);
+
+        // NOTE(alex): Unfavorite when the user tries to favorite the same id.
+        if task.id == *id {
+            session.remove("favorite_task");
+            Ok(HttpResponse::Found().json(task))
+        } else {
+            let task = Task::find_by_id(&db_pool, *id).await?;
+            session.insert("favorite_task", task.clone())?;
+            Ok(HttpResponse::Found().json(task))
+        }
+    } else {
+        let task = Task::find_by_id(&db_pool, *id).await?;
+        session.insert("favorite_task", task.clone())?;
+        Ok(HttpResponse::Found().json(task))
+    }
+}
+
+#[get("/tasks/favorite")]
+async fn find_favorite(session: Session) -> Result<impl Responder, AppError> {
+    if let Some(task) = session.get::<Task>("favorite_task")? {
+        Ok(HttpResponse::Found().json(task))
+    } else {
+        Err(TaskError::NoneFavorite.into())
+    }
 }
 
 pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {

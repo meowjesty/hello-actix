@@ -5,6 +5,9 @@ use thiserror::Error;
 pub(crate) enum TaskError {
     #[error("`title` field of `Task` cannot be empty!")]
     EmptyTitle,
+
+    #[error("No favorite `Task` was found!")]
+    NoneFavorite,
 }
 
 #[derive(Debug, Error)]
@@ -30,6 +33,7 @@ impl ResponseError for AppError {
         match self {
             AppError::Task(task_error) => match task_error {
                 TaskError::EmptyTitle => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                TaskError::NoneFavorite => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,

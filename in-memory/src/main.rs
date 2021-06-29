@@ -1,8 +1,6 @@
 use std::sync::Mutex;
 
-use actix_web::{
-    body::Body, get, web, App, BaseHttpResponse, HttpResponse, HttpServer, ResponseError,
-};
+use actix_web::{get, web, App, HttpResponse, HttpServer, ResponseError};
 use routes::task_service;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
