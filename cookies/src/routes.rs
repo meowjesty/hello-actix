@@ -20,7 +20,7 @@ async fn insert(
 async fn update(
     db_pool: web::Data<SqlitePool>,
     input: UpdateTask,
-) -> Result<HttpResponse, AppError> {
+) -> Result<impl Responder, AppError> {
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
@@ -40,9 +40,6 @@ async fn delete(
     if num_modified == 0 {
         Ok(HttpResponse::NotModified().finish())
     } else {
-        // NOTE(alex): This doesn't work, rust expects it to be a `HttpResponse`, but we pass a
-        // string, and the type won´t check.
-        // Ok(num_modified.to_string())
         Ok(HttpResponse::Ok().body(num_modified.to_string()))
     }
 }
