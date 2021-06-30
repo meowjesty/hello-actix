@@ -2,7 +2,10 @@ use actix_identity::Identity;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use sqlx::SqlitePool;
 
-use super::models::{InsertUser, UpdateUser, User};
+use super::{
+    errors::UserError,
+    models::{InsertUser, LoginUser, UpdateUser, User},
+};
 use crate::errors::AppError;
 
 // #[get("/users/testing/dos")]
@@ -17,12 +20,6 @@ use crate::errors::AppError;
 // #[post("/users/testing/login")]
 // async fn login(id: Identity) -> impl Responder {
 //     id.remember("User1".to_string());
-//     HttpResponse::Ok().finish()
-// }
-
-// #[post("/users/testin/logout")]
-// async fn logout(id: Identity) -> impl Responder {
-//     id.forget();
 //     HttpResponse::Ok().finish()
 // }
 
@@ -78,12 +75,36 @@ async fn find_by_id(
     Ok(user)
 }
 
+#[post("/users/login")]
+async fn login(
+    db_pool: web::Data<SqlitePool>,
+    identity: Identity,
+    input: web::Json<LoginUser>,
+) -> Result<impl Responder, AppError> {
+    let user = input.into_inner().login(&db_pool).await?;
+    match user {
+        Some(user) => {
+            identity.remember(serde_json::to_string_pretty(&user)?);
+            Ok(user)
+        }
+        None => Err(UserError::NotFound(-100000).into()),
+    }
+}
+
+#[post("/users/logout")]
+async fn logout(identity: Identity) -> impl Responder {
+    identity.forget();
+    HttpResponse::Ok().body("Logged out.")
+}
+
 pub(crate) fn user_service(cfg: &mut web::ServiceConfig) {
     cfg.service(insert);
     cfg.service(update);
     cfg.service(delete);
     cfg.service(find_all);
     cfg.service(find_by_id);
+    cfg.service(login);
+    cfg.service(logout);
 }
 
 #[cfg(test)]

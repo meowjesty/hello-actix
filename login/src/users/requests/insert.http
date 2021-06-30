@@ -6,7 +6,7 @@ Content-Type: application/json
 
 {
     "valid_username": "user",
-    "password": "plaintext"
+    "valid_password": "plaintext"
 }
 
 ####
@@ -17,7 +17,7 @@ Content-Type: application/json
 
 {
     "valid_username": "",
-    "password": "plaintext"
+    "valid_password": "plaintext"
 }
 
 ####
@@ -28,5 +28,5 @@ Content-Type: application/json
 
 {
     "valid_username": "user",
-    "password": ""
+    "valid_password": ""
 }

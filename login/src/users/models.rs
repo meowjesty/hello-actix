@@ -31,6 +31,11 @@ pub(crate) struct UpdateUser {
     pub(crate) valid_username: String,
     pub(crate) valid_password: String,
 }
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+pub(crate) struct LoginUser {
+    pub(crate) username: String,
+    pub(crate) password: String,
+}
 
 impl InsertUser {
     pub(crate) async fn insert(self, db_pool: &SqlitePool) -> Result<User, AppError> {
@@ -123,6 +128,18 @@ impl User {
     ) -> Result<Option<Self>, AppError> {
         let result = sqlx::query_as(FIND_BY_ID)
             .bind(user_id)
+            .fetch_optional(db_pool)
+            .await?;
+
+        Ok(result)
+    }
+}
+
+impl LoginUser {
+    pub(crate) async fn login(self, db_pool: &SqlitePool) -> Result<Option<User>, AppError> {
+        let result = sqlx::query_as(LOGIN)
+            .bind(self.username)
+            .bind(self.password)
             .fetch_optional(db_pool)
             .await?;
 
