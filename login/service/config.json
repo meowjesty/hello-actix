@@ -1,0 +1,7 @@
+{
+    "address": "127.0.0.1:8080",
+    "release_database": "databases/login.db",
+    "debug_database": "databases/login.debug.db",
+    "test_database": "databases/login.test.db",
+    "create_database": true
+}

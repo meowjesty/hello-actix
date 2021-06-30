@@ -1,0 +1,20 @@
+[package]
+name = "service"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = { version = "4.0.0-beta.8" }
+actix-session = { version = "0.5.0-beta.2"}
+serde = { version = "*", features = ["derive"] }
+serde_json = { version = "*" }
+thiserror = "*"
+sqlx = { version = "*", features = [ "runtime-actix-rustls", "sqlite" ] }
+env_logger = "*"
+log = "*"
+futures = "*"
+
+[dev-dependencies]
+actix-rt = "*"

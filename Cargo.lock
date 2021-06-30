@@ -1070,6 +1070,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "login"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "env_logger",
+ "service",
+]
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1494,6 +1503,22 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "service"
+version = "0.1.0"
+dependencies = [
+ "actix-rt",
+ "actix-session",
+ "actix-web",
+ "env_logger",
+ "futures",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
 ]
 
 [[package]]

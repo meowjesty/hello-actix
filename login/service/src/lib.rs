@@ -33,10 +33,7 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
     Ok(result.rows_affected().to_string())
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init();
-
+pub async fn make_app() -> std::io::Result<()> {
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(env!("DATABASE_FILE"))
         .create_if_missing(true);
@@ -47,7 +44,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap();
 
-    if let Some(_) = option_env!("CREATE_DATABASE") {
+    if option_env!("NEW_DATABASE").is_some() {
         create_database(&database_pool).await.unwrap();
     }
 

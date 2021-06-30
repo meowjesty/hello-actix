@@ -5,5 +5,7 @@ members = [
     "in-memory",
     "sqlite",
     "cookies",
+    "login",
+    "login/service",
     "experiments",
 ]
