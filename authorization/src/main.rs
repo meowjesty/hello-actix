@@ -1,6 +1,9 @@
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
-use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    dev::ServiceRequest, get, middleware, App, Error, HttpResponse, HttpServer, Responder,
+};
+use actix_web_httpauth::{extractors::basic::BasicAuth, middleware::HttpAuthentication};
 use errors::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tasks::routes::task_service;
@@ -34,6 +37,10 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
         .await?;
 
     Ok(result.rows_affected().to_string())
+}
+
+async fn validator(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, Error> {
+    Ok(req)
 }
 
 #[actix_web::main]
@@ -76,6 +83,7 @@ pub async fn main() -> std::io::Result<()> {
                     .login_deadline(Duration::seconds(60))
                     .secure(false),
             ))
+            .wrap(HttpAuthentication::basic(validator))
     })
     .bind(env!("ADDRESS"))?
     .run()

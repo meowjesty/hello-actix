@@ -1,0 +1,50 @@
+@baseUrl = http://127.0.0.1:8080
+
+# @name update_user
+PUT {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "user",
+    "valid_password": "plaintext"
+}
+
+####
+
+# @name update_invalid_user_username
+PUT {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "",
+    "valid_password": "plaintext"
+}
+
+####
+
+# @name update_empty_user_valid_password
+PUT {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "upuser",
+    "valid_password": "plaintext"
+}
+
+####
+
+# @name update_invalid_id
+PUT {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+
+{
+    "id": "",
+    "valid_username": "upuser",
+    "valid_password": "plaintext"
+}
+
+####
+
