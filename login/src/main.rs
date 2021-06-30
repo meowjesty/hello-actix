@@ -1,12 +1,15 @@
+use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
 use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
 use errors::AppError;
-use routes::task_service;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use tasks::routes::task_service;
+use time::Duration;
+use users::routes::user_service;
 
 mod errors;
-mod models;
-mod routes;
+mod tasks;
+mod users;
 
 const WELCOME_MSG: &'static str = include_str!("./../strings/welcome.txt");
 
@@ -35,6 +38,8 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
 
 #[actix_web::main]
 pub async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(env!("DATABASE_FILE"))
         .create_if_missing(true);
@@ -56,8 +61,21 @@ pub async fn main() -> std::io::Result<()> {
             .app_data(data.clone())
             .service(index)
             .configure(task_service)
-            .wrap(CookieSession::signed(&[0; 32]).secure(false))
+            .configure(user_service)
+            .wrap(
+                CookieSession::signed(&[0; 32])
+                    .secure(false)
+                    // WARNING(alex): This uses the `time` crate, not `std::time`!
+                    .expires_in_time(Duration::seconds(5)),
+            )
             .wrap(middleware::Logger::default())
+            .wrap(IdentityService::new(
+                CookieIdentityPolicy::new(&[0; 32])
+                    .name("auth-cookie")
+                    .login_deadline(Duration::seconds(10))
+                    .max_age(Duration::seconds(20))
+                    .secure(false),
+            ))
     })
     .bind(env!("ADDRESS"))?
     .run()

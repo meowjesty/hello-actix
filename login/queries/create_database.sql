@@ -1,3 +1,4 @@
+drop table if exists User;
 drop view if exists OngoingTask;
 drop table if exists Task;
 drop table if exists Done;
@@ -23,3 +24,9 @@ where
         select task_id
         from Done
     );
+
+create table if not exists User (
+    id integer primary key,
+    username text not null,
+    password text not null
+);

@@ -6,21 +6,11 @@ use futures::{future::LocalBoxFuture, FutureExt};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
-use crate::errors::{AppError, TaskError};
-
-const FIND_BY_PATTERN: &'static str = include_str!("./../queries/find_by_pattern.sql");
-const FIND_ONGOING: &'static str = include_str!("./../queries/find_ongoing.sql");
-const FIND_ALL: &'static str = include_str!("./../queries/find_all.sql");
-const FIND_BY_ID: &'static str = include_str!("./../queries/find_by_id.sql");
-const INSERT: &'static str = include_str!("./../queries/insert.sql");
-const UPDATE: &'static str = include_str!("./../queries/update.sql");
-const DELETE: &'static str = include_str!("./../queries/delete.sql");
-
-const COMPLETED: &'static str = include_str!("./../queries/done.sql");
-const UNDO: &'static str = include_str!("./../queries/undo.sql");
+use super::{errors::*, *};
+use crate::errors::AppError;
 
 // TODO(alex) [low] 2021-06-28: Most of these `pub(crate)` are here because of tests that are in
-// other modules, hos do I solve this?
+// other modules, how do I solve this?
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub(crate) struct Task {
     pub(crate) id: i64,
@@ -129,13 +119,11 @@ impl Task {
 
     pub(crate) async fn find_all(db_pool: &SqlitePool) -> Result<Vec<Self>, AppError> {
         let result = sqlx::query_as(FIND_ALL).fetch_all(db_pool).await?;
-
         Ok(result)
     }
 
     pub(crate) async fn find_ongoing(db_pool: &SqlitePool) -> Result<Vec<Self>, AppError> {
         let result = sqlx::query_as(FIND_ONGOING).fetch_all(db_pool).await?;
-
         Ok(result)
     }
 

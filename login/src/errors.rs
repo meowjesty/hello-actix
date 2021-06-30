@@ -1,22 +1,15 @@
 use actix_web::{error::JsonPayloadError, HttpResponse, ResponseError};
 use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub(crate) enum TaskError {
-    #[error("`title` field of `Task` cannot be empty!")]
-    EmptyTitle,
-
-    #[error("Could not find any `Task` for id: `{0}`!")]
-    NotFound(i64),
-
-    #[error("You have not favorited any `Task` yet!")]
-    NoneFavorite,
-}
+use crate::{tasks::errors::TaskError, users::errors::UserError};
 
 #[derive(Debug, Error)]
 pub(crate) enum AppError {
     #[error("`{0}`")]
     Task(#[from] TaskError),
+
+    #[error("`{0}`")]
+    User(#[from] UserError),
 
     #[error("`{0}`")]
     Database(#[from] sqlx::Error),
@@ -38,6 +31,19 @@ impl ResponseError for AppError {
                 TaskError::EmptyTitle => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
                 TaskError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
                 TaskError::NoneFavorite => actix_web::http::StatusCode::NOT_FOUND,
+            },
+            AppError::User(user_error) => match user_error {
+                UserError::EmptyUsername => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                UserError::UsernameLength => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                UserError::UsernameInvalidCharacter => {
+                    actix_web::http::StatusCode::UNPROCESSABLE_ENTITY
+                }
+                UserError::EmptyPassword => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                UserError::PasswordLength => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
+                UserError::PasswordInvalidCharacter => {
+                    actix_web::http::StatusCode::UNPROCESSABLE_ENTITY
+                }
+                UserError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,

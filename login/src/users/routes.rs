@@ -1,25 +1,44 @@
-use actix_session::Session;
+use actix_identity::Identity;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use sqlx::SqlitePool;
 
-use crate::{
-    errors::{AppError, TaskError},
-    models::{InsertTask, QueryTask, Task, UpdateTask},
-};
+use super::models::{InsertUser, UpdateUser, User};
+use crate::errors::AppError;
 
-#[post("/tasks")]
+// #[get("/users/testing/dos")]
+// async fn user(id: Identity) -> impl Responder {
+//     if let Some(id) = id.identity() {
+//         format!("Welcome, {}", id)
+//     } else {
+//         format!("No identity!")
+//     }
+// }
+
+// #[post("/users/testing/login")]
+// async fn login(id: Identity) -> impl Responder {
+//     id.remember("User1".to_string());
+//     HttpResponse::Ok().finish()
+// }
+
+// #[post("/users/testin/logout")]
+// async fn logout(id: Identity) -> impl Responder {
+//     id.forget();
+//     HttpResponse::Ok().finish()
+// }
+
+#[post("/users")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
-    input: InsertTask,
+    input: InsertUser,
 ) -> Result<impl Responder, AppError> {
-    let task = input.insert(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Created().json(task))
+    let user = input.insert(db_pool.get_ref()).await?;
+    Ok(HttpResponse::Created().json(user))
 }
 
-#[put("/tasks")]
+#[put("/users")]
 async fn update(
     db_pool: web::Data<SqlitePool>,
-    input: UpdateTask,
+    input: UpdateUser,
 ) -> Result<impl Responder, AppError> {
     let num_modified = input.update(db_pool.get_ref()).await?;
 
@@ -30,12 +49,12 @@ async fn update(
     }
 }
 
-#[delete("/tasks/{id}")]
+#[delete("/users/{id}")]
 async fn delete(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    let num_modified = Task::delete(db_pool.get_ref(), *id).await?;
+    let num_modified = User::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
         Ok(HttpResponse::NotModified().finish())
@@ -44,136 +63,29 @@ async fn delete(
     }
 }
 
-#[post("/tasks/{id}/done")]
-async fn done(
-    db_pool: web::Data<SqlitePool>,
-    id: web::Path<i64>,
-) -> Result<impl Responder, AppError> {
-    let created_id = Task::done(db_pool.get_ref(), *id).await?;
-
-    if created_id == 0 {
-        Ok(HttpResponse::NotModified().finish())
-    } else {
-        Ok(HttpResponse::Created().body(created_id.to_string()))
-    }
-}
-
-#[delete("/tasks/{id}/undo")]
-async fn undo(
-    db_pool: web::Data<SqlitePool>,
-    id: web::Path<i64>,
-) -> Result<impl Responder, AppError> {
-    let num_modified = Task::undo(db_pool.get_ref(), *id).await?;
-
-    if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
-    } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
-    }
-}
-
-#[get("/tasks")]
+#[get("/users")]
 async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
-    let tasks = Task::find_all(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Found().json(&tasks))
+    let users = User::find_all(db_pool.get_ref()).await?;
+    Ok(HttpResponse::Found().json(&users))
 }
 
-#[get("/tasks/ongoing")]
-async fn find_ongoing(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
-    let tasks = Task::find_ongoing(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Found().json(&tasks))
-}
-
-#[get("/tasks")]
-async fn find_by_pattern(
-    db_pool: web::Data<SqlitePool>,
-    pattern: web::Query<QueryTask>,
-) -> Result<impl Responder, AppError> {
-    let tasks = Task::find_by_pattern(db_pool.get_ref(), &format!("%{}%", pattern.title)).await?;
-    Ok(HttpResponse::Found().json(&tasks))
-}
-
-/// NOTE(alex): Regex to match only digits, otherwise it matches the "/tasks/favorite" find route.
-/// This issue may be solved in one of two ways:
-///
-/// 1. Include a regex or a `guard` to check which route is the best representative for this type of
-/// request;
-/// 2. Order the routes during setup in a way that avoids conflicts, such as a `{id}` pattern, which
-// is the equivalent of the `[^/]+` regex.
-///
-/// There is a 3rd way of sorts, which boils down to: avoid possible route conflicting paths.
-#[get("/tasks/{id:\\d+}")]
+#[get("/users/{id:\\d+}")]
 async fn find_by_id(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    let task = Task::find_by_id(db_pool.get_ref(), *id).await?;
-    Ok(task)
+    let user = User::find_by_id(db_pool.get_ref(), *id).await?;
+    Ok(user)
 }
 
-const FAVORITE_TASK_STR: &'static str = "favorite_task";
-
-#[get("/tasks/favorite/{id}")]
-async fn favorite(
-    db_pool: web::Data<SqlitePool>,
-    session: Session,
-    id: web::Path<i64>,
-) -> Result<impl Responder, AppError> {
-    if let Some(old) = session.remove(FAVORITE_TASK_STR) {
-        let old_favorite: Task = serde_json::from_str(&old)?;
-
-        if old_favorite.id == *id {
-            // NOTE(alex): Just remove the task, this is basically "unfavorite".
-            Ok(HttpResponse::NoContent().finish())
-        } else {
-            match Task::find_by_id(&db_pool, *id).await? {
-                Some(task) => {
-                    session.insert(FAVORITE_TASK_STR, task.clone())?;
-                    Ok(HttpResponse::Found().json(task))
-                }
-                None => Err(TaskError::NotFound(*id).into()),
-            }
-        }
-    } else {
-        match Task::find_by_id(&db_pool, *id).await? {
-            Some(task) => {
-                session.insert(FAVORITE_TASK_STR, task.clone())?;
-                Ok(HttpResponse::Found().json(task))
-            }
-            None => Err(TaskError::NoneFavorite.into()),
-        }
-    }
-}
-
-#[get("/tasks/favorite")]
-async fn find_favorite(session: Session) -> Result<impl Responder, AppError> {
-    if let Some(task) = session.get::<Task>("favorite_task")? {
-        Ok(HttpResponse::Found().json(task))
-    } else {
-        Err(TaskError::NoneFavorite.into())
-    }
-}
-
-pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
+pub(crate) fn user_service(cfg: &mut web::ServiceConfig) {
     cfg.service(insert);
     cfg.service(update);
     cfg.service(delete);
-    cfg.service(done);
-    cfg.service(undo);
     cfg.service(find_all);
-    cfg.service(find_ongoing);
-    cfg.service(find_by_pattern);
     cfg.service(find_by_id);
-    cfg.service(favorite);
-    cfg.service(find_favorite);
 }
 
-/// NOTE(alex): Binary crates cannot use the integration test convention of having a separate
-/// `tests` folder living alongside `src`. To have proper testing (smaller file size) you could
-/// create a library crate, and move the implementation and tests there.
-///
-/// Keep in mind that the library approach requires every testable function to have `pub`
-/// visilibity!
 #[cfg(test)]
 mod tests {
     use std::env;
@@ -212,7 +124,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(5)
+            .max_connections(20)
             .connect_with(db_options)
             .await
             .unwrap();
@@ -227,13 +139,13 @@ mod tests {
         let data = setup_data().await;
         let mut app = test::init_service(App::new().app_data(data.clone()).service(insert)).await;
 
-        let valid_insert = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let valid_insert = InsertUser {
+            valid_username: "valid_user".to_string(),
+            valid_password: "valid_password".to_string(),
         };
 
         let request = test::TestRequest::post()
-            .uri("/tasks")
+            .uri("/users")
             .set_json(&valid_insert)
             .to_request();
         let response = test::call_service(&mut app, request).await;
@@ -242,17 +154,17 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_insert_invalid_title() {
+    async fn test_insert_invalid_username() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
 
-        let invalid_insert = InsertTask {
-            non_empty_title: " \n\t".to_string(),
-            details: "details".to_string(),
+        let invalid_insert = InsertUser {
+            valid_username: " \n\t".to_string(),
+            valid_password: "valid_password".to_string(),
         };
 
         let request = test::TestRequest::post()
-            .uri("/tasks")
+            .uri("/users")
             .set_json(&invalid_insert)
             .to_request();
         let response = test::call_service(&mut app, request).await;
@@ -271,35 +183,35 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let user = InsertUser {
+            valid_username: "valid_username".to_string(),
+            valid_password: "valid_password".to_string(),
         };
 
         // NOTE(alex): Insert before updating.
         let request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&task)
+            .uri("/users")
+            .set_json(&user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
 
         // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
+        let user: User = match response.into_body() {
             actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
+                serde_json::from_slice(&bytes).expect("Failed deserializing created user!")
             }
             _ => panic!("Unexpected body!"),
         };
-        let valid_update = UpdateTask {
-            id: task.id,
-            new_title: format!("{} Updated", task.title),
-            details: format!("{} Updated", task.details),
+        let valid_update = UpdateUser {
+            id: user.id,
+            valid_username: format!("{}updated", user.username),
+            valid_password: format!("{}updated", user.password),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
-            .uri("/tasks")
+            .uri("/users")
             .set_json(&valid_update)
             .to_request();
         let response = test::call_service(&mut app, request).await;
@@ -307,7 +219,7 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_update_invalid_title() {
+    async fn test_update_invalid_username() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(
             App::new()
@@ -317,35 +229,35 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Title".to_string(),
-            details: "details".to_string(),
+        let user = InsertUser {
+            valid_username: "valid_username".to_string(),
+            valid_password: "valid_password".to_string(),
         };
 
         // NOTE(alex): Insert before updating.
         let request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&task)
+            .uri("/users")
+            .set_json(&user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
 
         // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
+        let user: User = match response.into_body() {
             actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
+                serde_json::from_slice(&bytes).expect("Failed deserializing created user!")
             }
             _ => panic!("Unexpected body!"),
         };
-        let invalid_update = UpdateTask {
-            id: task.id,
-            new_title: " \n\t".to_string(),
-            details: format!("{} Updated", task.details),
+        let invalid_update = UpdateUser {
+            id: user.id,
+            valid_username: " \n\t".to_string(),
+            valid_password: format!("{}updated", user.password),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
-            .uri("/tasks")
+            .uri("/users")
             .set_json(&invalid_update)
             .to_request();
         let response = test::call_service(&mut app, request).await;
@@ -363,24 +275,24 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let user = InsertUser {
+            valid_username: "valid_username".to_string(),
+            valid_password: "valid_password".to_string(),
         };
 
         // NOTE(alex): Insert
         let request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&task)
+            .uri("/users")
+            .set_json(&user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
-            .uri("/tasks/1")
+            .uri("/users/1")
             // TODO(alex) [low] 2021-06-06: Why doesn't this work?
-            // .uri("/tasks")
+            // .uri("/users")
             // .param("id", "1")
             .to_request();
 
@@ -393,8 +305,9 @@ mod tests {
         let database_pool = setup_data().await;
         let mut app = test::init_service(App::new().app_data(database_pool).service(delete)).await;
 
-        let request = test::TestRequest::delete().uri("/tasks/1000").to_request();
+        let request = test::TestRequest::delete().uri("/users/1000").to_request();
         let response = test::call_service(&mut app, request).await;
+        println!("{:#?}", response);
         assert!(response.status().is_redirection());
     }
 }
