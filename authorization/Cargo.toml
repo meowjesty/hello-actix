@@ -2,6 +2,11 @@
 name = "authorization"
 version = "0.1.0"
 edition = "2018"
+description = "Voyage through actix-web: "
+homepage = "https://github.com/meowjesty/hello-actix"
+repository = "https://github.com/meowjesty/hello-actix/"
+license = "MIT OR Apache-2.0"
+keywords = ["actix-web", "webdev", "reference"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
