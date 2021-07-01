@@ -3,6 +3,7 @@
 
 # @name login
 POST {{baseUrl}}/users/login HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -14,3 +15,4 @@ Content-Type: application/json
 
 # @name logout
 POST {{baseUrl}}/users/logout HTTP/1.1
+Authorization: Basic user:user

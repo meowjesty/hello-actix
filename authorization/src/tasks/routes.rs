@@ -1,52 +1,24 @@
-use actix_identity::Identity;
 use actix_session::Session;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use actix_web_httpauth::extractors::basic::BasicAuth;
-use log::info;
 use sqlx::SqlitePool;
 
 use super::{errors::*, models::*};
-use crate::{
-    errors::AppError,
-    users::{errors::UserError, models::User},
-};
-
-// TODO(alex) [high] 2021-06-30: Protect routes with authorization middleware.
-// Should I add more information to the `User` type, such as away to identify the user permission
-// level ('admin', 'user')?
-
-fn validate_logged_in(credentials: BasicAuth, identity: Identity) -> Result<(), AppError> {
-    if let Some(user_identity) = identity.identity() {
-        let user: User = serde_json::from_str(&user_identity)?;
-        user.logged_in(credentials)?;
-        Ok(())
-    } else {
-        Err(AppError::User(UserError::NotLoggedIn))
-    }
-}
+use crate::errors::AppError;
 
 #[post("/tasks")]
 async fn insert(
-    credentials: BasicAuth,
-    identity: Identity,
     db_pool: web::Data<SqlitePool>,
     input: InsertTask,
 ) -> Result<impl Responder, AppError> {
-    validate_logged_in(credentials, identity)?;
-
     let task = input.insert(db_pool.get_ref()).await?;
     Ok(HttpResponse::Created().json(task))
 }
 
 #[put("/tasks")]
 async fn update(
-    credentials: BasicAuth,
-    identity: Identity,
     db_pool: web::Data<SqlitePool>,
     input: UpdateTask,
 ) -> Result<impl Responder, AppError> {
-    validate_logged_in(credentials, identity)?;
-
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
@@ -58,13 +30,9 @@ async fn update(
 
 #[delete("/tasks/{id}")]
 async fn delete(
-    credentials: BasicAuth,
-    identity: Identity,
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    validate_logged_in(credentials, identity)?;
-
     let num_modified = Task::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
@@ -76,13 +44,9 @@ async fn delete(
 
 #[post("/tasks/{id}/done")]
 async fn done(
-    credentials: BasicAuth,
-    identity: Identity,
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    validate_logged_in(credentials, identity)?;
-
     let created_id = Task::done(db_pool.get_ref(), *id).await?;
 
     if created_id == 0 {
@@ -94,13 +58,9 @@ async fn done(
 
 #[delete("/tasks/{id}/undo")]
 async fn undo(
-    credentials: BasicAuth,
-    identity: Identity,
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    validate_logged_in(credentials, identity)?;
-
     let num_modified = Task::undo(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {

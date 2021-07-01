@@ -33,7 +33,4 @@ pub(crate) enum UserError {
 
     #[error("User is not logged in!")]
     NotLoggedIn,
-
-    #[error("User that is logged in is different from user in authorization!")]
-    DifferentUser,
 }

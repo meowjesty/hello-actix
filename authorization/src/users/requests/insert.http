@@ -1,7 +1,8 @@
 @baseUrl = http://127.0.0.1:8080
 
-# @name insert_user
-POST {{baseUrl}}/users HTTP/1.1
+# @name register_user
+POST {{baseUrl}}/users/register HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -13,6 +14,7 @@ Content-Type: application/json
 
 # @name insert_invalid_user_username
 POST {{baseUrl}}/users HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -24,6 +26,7 @@ Content-Type: application/json
 
 # @name insert_invalid_empty_user_password
 POST {{baseUrl}}/users HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {

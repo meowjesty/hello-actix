@@ -8,7 +8,7 @@ use super::{
 };
 use crate::errors::AppError;
 
-#[post("/users")]
+#[post("/users/register")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
     input: InsertUser,

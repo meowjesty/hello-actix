@@ -2,6 +2,7 @@
 
 # @name insert_user
 POST {{baseUrl}}/users HTTP/1.1
+Authorization: Basic username:password
 Content-Type: application/json
 
 {
@@ -25,6 +26,7 @@ Content-Type: application/json
 
 # @name login
 POST {{baseUrl}}/users/login HTTP/1.1
+Authorization: Basic user:plaintext
 Content-Type: application/json
 
 {
@@ -36,3 +38,10 @@ Content-Type: application/json
 
 # @name logout
 POST {{baseUrl}}/users/logout HTTP/1.1
+
+####
+
+# @name find
+GET {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic username:password
+

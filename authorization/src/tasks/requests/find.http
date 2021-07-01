@@ -2,8 +2,10 @@
 
 # @name find_all
 GET {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:user
 
 ####
 
 # @name find_by_id
 GET {{baseUrl}}/tasks/1 HTTP/1.1
+Authorization: Basic user:user

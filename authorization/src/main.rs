@@ -1,12 +1,20 @@
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
-use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
-use actix_web_httpauth::extractors::basic::Config;
+use actix_web::{
+    dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, HttpResponse,
+    HttpServer, Responder,
+};
+use actix_web_httpauth::{
+    extractors::basic::{BasicAuth, Config},
+    middleware::HttpAuthentication,
+};
 use errors::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tasks::routes::task_service;
 use time::Duration;
 use users::routes::user_service;
+
+use crate::users::errors::UserError;
 
 mod errors;
 mod tasks;
@@ -35,6 +43,24 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
         .await?;
 
     Ok(result.rows_affected().to_string())
+}
+
+async fn validator(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, Error> {
+    if req.method() == "GET"
+        || req.path().contains("login")
+        || req.path().contains("register")
+        || req.cookie("auth-cookie").is_some()
+    {
+        // NOTE(alex): Authorize:
+        // - GET requests are always authorized;
+        // - login route;
+        // - register route;
+        // - register route;
+        // - have an `auth-cookie` set (this indicates logged in user for us);
+        Ok(req)
+    } else {
+        Err(ErrorUnauthorized(UserError::NotLoggedIn))
+    }
 }
 
 #[actix_web::main]
@@ -69,17 +95,17 @@ pub async fn main() -> std::io::Result<()> {
                     .name("session-cookie")
                     .secure(false)
                     // WARNING(alex): This uses the `time` crate, not `std::time`!
-                    .expires_in_time(Duration::seconds(30)),
+                    .expires_in_time(Duration::seconds(60)),
             )
             .wrap(middleware::Logger::default())
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(&[0; 32])
                     .name("auth-cookie")
-                    .login_deadline(Duration::seconds(60))
+                    .login_deadline(Duration::seconds(120))
                     .secure(false),
             ))
-        // NOTE(alex): Doing this makes the whole application require authorization.
-        // .wrap(HttpAuthentication::basic(validator))
+            // NOTE(alex): Doing this makes the whole application require authorization.
+            .wrap(HttpAuthentication::basic(validator))
     })
     .bind(env!("ADDRESS"))?
     .run()

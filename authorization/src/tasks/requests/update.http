@@ -2,6 +2,7 @@
 
 # @name update_task
 PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -14,6 +15,7 @@ Content-Type: application/json
 
 # @name update_invalid_task_title
 PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -26,6 +28,7 @@ Content-Type: application/json
 
 # @name update_empty_task_details
 PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
@@ -38,6 +41,7 @@ Content-Type: application/json
 
 # @name update_invalid_id
 PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:user
 Content-Type: application/json
 
 {
