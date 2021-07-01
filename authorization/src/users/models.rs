@@ -1,7 +1,10 @@
+use std::borrow::Cow;
+
 use actix_web::{
     dev::{JsonBody, Payload},
     FromRequest, HttpRequest, HttpResponse, Responder,
 };
+use actix_web_httpauth::extractors::basic::BasicAuth;
 use futures::{future::LocalBoxFuture, FutureExt};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
@@ -132,6 +135,19 @@ impl User {
             .await?;
 
         Ok(result)
+    }
+
+    pub(crate) fn logged_in(&self, credentials: BasicAuth) -> Result<(), UserError> {
+        if self.username == *credentials.user_id()
+            && self.password
+                == *credentials
+                    .password()
+                    .unwrap_or(&Cow::Owned("".to_string()))
+        {
+            Ok(())
+        } else {
+            Err(UserError::DifferentUser)
+        }
     }
 }
 

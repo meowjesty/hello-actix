@@ -2,6 +2,7 @@
 
 # @name insert_task
 POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:plaintext
 Content-Type: application/json
 
 {
@@ -13,6 +14,7 @@ Content-Type: application/json
 
 # @name insert_invalid_task_title
 POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:plaintext
 Content-Type: application/json
 
 {
@@ -24,6 +26,7 @@ Content-Type: application/json
 
 # @name insert_empty_task_details
 POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Basic user:plaintext
 Content-Type: application/json
 
 {

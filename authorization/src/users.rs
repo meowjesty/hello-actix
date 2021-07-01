@@ -1,5 +1,5 @@
 pub(crate) mod errors;
-mod models;
+pub(crate) mod models;
 pub(crate) mod routes;
 
 const FIND_ALL: &'static str = include_str!("./users/queries/find_all.sql");

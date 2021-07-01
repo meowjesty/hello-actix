@@ -30,4 +30,10 @@ pub(crate) enum UserError {
 
     #[error("Could not find any `User` for id: `{0}`!")]
     NotFound(i64),
+
+    #[error("User is not logged in!")]
+    NotLoggedIn,
+
+    #[error("User that is logged in is different from user in authorization!")]
+    DifferentUser,
 }
