@@ -10,4 +10,7 @@ pub(crate) enum TaskError {
 
     #[error("You have not favorited any `Task` yet!")]
     NoneFavorite,
+
+    #[error("Could not find any `Task`!")]
+    Empty,
 }

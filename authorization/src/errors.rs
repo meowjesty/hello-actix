@@ -31,6 +31,7 @@ impl ResponseError for AppError {
                 TaskError::EmptyTitle => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
                 TaskError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
                 TaskError::NoneFavorite => actix_web::http::StatusCode::NOT_FOUND,
+                TaskError::Empty => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::User(user_error) => match user_error {
                 UserError::EmptyUsername => actix_web::http::StatusCode::UNPROCESSABLE_ENTITY,
@@ -45,6 +46,7 @@ impl ResponseError for AppError {
                 }
                 UserError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
                 UserError::NotLoggedIn => actix_web::http::StatusCode::UNAUTHORIZED,
+                UserError::Empty => actix_web::http::StatusCode::NOT_FOUND,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,

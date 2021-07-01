@@ -48,7 +48,12 @@ async fn delete(
 #[get("/users")]
 async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let users = User::find_all(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Found().json(&users))
+
+    if users.is_empty() {
+        Err(UserError::Empty.into())
+    } else {
+        Ok(HttpResponse::Found().json(&users))
+    }
 }
 
 #[get("/users/{id:\\d+}")]

@@ -73,7 +73,12 @@ async fn undo(
 #[get("/tasks")]
 async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_all(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Found().json(&tasks))
+
+    if tasks.is_empty() {
+        Err(TaskError::Empty.into())
+    } else {
+        Ok(HttpResponse::Found().json(&tasks))
+    }
 }
 
 #[get("/tasks/ongoing")]
@@ -88,7 +93,12 @@ async fn find_by_pattern(
     pattern: web::Query<QueryTask>,
 ) -> Result<impl Responder, AppError> {
     let tasks = Task::find_by_pattern(db_pool.get_ref(), &format!("%{}%", pattern.title)).await?;
-    Ok(HttpResponse::Found().json(&tasks))
+
+    if tasks.is_empty() {
+        Err(TaskError::Empty.into())
+    } else {
+        Ok(HttpResponse::Found().json(&tasks))
+    }
 }
 
 /// NOTE(alex): Regex to match only digits, otherwise it matches the "/tasks/favorite" find route.
