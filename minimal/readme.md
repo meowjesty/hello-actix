@@ -25,11 +25,35 @@ to bind an address to our server, and
 
 ## 1.2 Services and routes
 
-The minimal project could've been written with
-[`route`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.route) instead of
-[`service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.service), but I
-like the `#[get("/path")]` service macro better than the `#[route("/path", method="GET")]`.
-Even though they are similar, they're not the same thing, and you can get a `Service` from a `Route`
-with the
-[`Route::service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Route.html#method.service)
- function.
+The minimal project could've been written with the
+[`route`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.route) macro
+instead of the
+[`get`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/attr.get.html) service macro:
+
+```rust
+// actix-web::route macro example
+#[route("/", method="GET")]
+async fn index() -> HttpResponse {
+    let response = HttpResponse::Ok()
+        .content_type("text/html; charset=UTF-8")
+        .body(WELCOME_MSG);
+    response
+}
+```
+
+Using the `route` macros allows more than one HTTP method, while the service macro is specific to
+one HTTP method:
+
+```rust
+// actix-web::route macro example, multiple methods
+#[route("/", method="GET", method="POST", method="PUT")]
+async fn index() -> HttpResponse {
+    let response = HttpResponse::Ok()
+        .content_type("text/html; charset=UTF-8")
+        .body(WELCOME_MSG);
+    response
+}
+```
+
+I prefer to have separate functions for each method, thus the examples will be going the service
+route (hehe), even though you can do the same thing with `route`.
