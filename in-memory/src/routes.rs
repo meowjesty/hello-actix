@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use actix_web::{delete, get, post, put, web, HttpResponse};
 
 use crate::{AppData, AppError, InsertTask, Task, UpdateTask};
@@ -10,14 +12,8 @@ async fn insert(
     if input.non_empty_title.trim().is_empty() {
         Err(AppError::EmptyTitle)
     } else {
-        let mut id_tracker = app_data
-            .id_tracker
-            // Try to acquire lock, convert to a 'catch-all' error on failure.
-            .try_lock()
-            .map_err(|_| AppError::Internal)?;
-
         let new_task = Task {
-            id: *id_tracker,
+            id: app_data.id_tracker.load(Ordering::Relaxed),
             title: input.non_empty_title.to_owned(),
             details: input.details.to_owned(),
         };
@@ -29,7 +25,7 @@ async fn insert(
             .map_err(|_| AppError::Internal)?;
 
         task_list.push(new_task.clone());
-        *id_tracker += 1;
+        app_data.id_tracker.fetch_add(1, Ordering::Relaxed);
 
         let response = HttpResponse::Ok().json(new_task);
         Ok(response)

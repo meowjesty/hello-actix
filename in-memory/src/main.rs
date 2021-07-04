@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, atomic::AtomicU64};
 
 use actix_web::{get, web, App, HttpResponse, HttpServer, ResponseError};
 use routes::task_service;
@@ -59,7 +59,7 @@ impl ResponseError for AppError {
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
-    id_tracker: Mutex<u64>,
+    id_tracker: AtomicU64,
     task_list: Mutex<Vec<Task>>,
 }
 
@@ -74,7 +74,7 @@ async fn index() -> HttpResponse {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_data = web::Data::new(AppData {
-        id_tracker: Mutex::new(0),
+        id_tracker: AtomicU64::new(0),
         task_list: Mutex::new(Vec::with_capacity(100)),
     });
 
