@@ -1,4 +1,4 @@
-# Voyage through [`actix-web`](https://github.com/actix/actix-web)
+# Hello [`actix-web`](https://github.com/actix/actix-web)
 
 ## What is this?
 
@@ -9,8 +9,10 @@ A bunch of **To-do** web apps written with an increasing amount of features usin
 ### Things to keep in mind
 
 The intention here is **not** to show how to implement a robust, **production** web service, these
-examples are exploratory projects. You're a tourist in Actixland enjoying the sights, taking some
-pictures, "Oh wow! They also have this thing here, crazy small world, huh?!".
+examples are exploratory projects. We'll be taking a tour in Actixland by implementing a very
+simple task management service, and increasing the amount of features as we get more familiar with
+what actix can offer. Starting with a basic actix app with a single route, and moving towards an app
+that supports protected routes.
 
 I've tried to keep dependencies to a minimum, focusing on the basics of the framework and its
 ecosystem. Another focal point was in keeping things "simple", this means that in places were things
@@ -24,23 +26,28 @@ is the level of security you should expect here. Don't get me wrong, I'll show y
 authorization middleware to forbid and allow users from accessing certain routes, but we won't be
 going much further than that into security practices here.
 
-Some testing is included, but they're not covering the whole application (I wanted to avoid having
-big files, or having every route function being `pub`).
+Some testing is included, but they're not covering the whole application, I wanted to avoid having
+big files, or having every route function being `pub` (this will probably change in the future).
 
 ### Projects in ascending order of features
 
 1. [minimal](minimal/): A minimal "Hello, world" of sorts for
    [`actix-web`](https://github.com/actix/actix-web);
+
 2. [in-memory](in-memory/): Using
    [`web::Data`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.Data.html#) to hold an
    in-memory database of sorts (if you call having a `Mutex<Vec<T>>` as "using a database");
+
 3. [sqlite](sqlite/): Gets rid of `Mutex<Vec<T>>` "database" in favor of a proper sqlite
    database [pool](https://docs.rs/sqlx/0.5.5/sqlx/struct.Pool.html), courtesy of
    [`sqlx`](https://github.com/launchbadge/sqlx);
+
 4. [cookies](cookies/): We start playing with cookies (**DO NOT EAT**) and the
    [`actix_session`](https://github.com/actix/actix-extras/tree/master/actix-session) crate;
+
 5. [login](login/): Identify who is eating all the cookies by tracking authentication with
    [`actix-identity`](https://github.com/actix/actix-extras/tree/master/actix-identity);
+
 6. [authorization](authorization/): These are **MY** cookies! Allow and forbid access to routes
    with [`actix-web-httpauth`](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth);
 
@@ -64,7 +71,7 @@ workspace folder.
 - [actix-identity](https://github.com/actix/actix-extras/tree/master/actix-identity): Cookies for
   authentication;
 - [actix-web-httpauth](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth):
-  Forbidden cookies (protect routes);
+  Forbidden cookies (protected routes);
 - [serde](https://github.com/serde-rs/serde): Serialize and deserialize our `Task`s;
 - [serde_json](https://github.com/serde-rs/json): Does it with Json;
 - [thiserror](https://github.com/dtolnay/thiserror): Helps us to derive our custom `Error`s;
