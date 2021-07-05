@@ -181,3 +181,69 @@ later, but for now this is plenty of information to extract.
 #[post("/tasks")]
 async fn insert(app_data: Data<AppData>, input: Json<InsertTask>) -> Result<HttpResponse, AppError>
 ```
+
+The `insert` function takes a `Data<AppData>` extractor so that we can insert a new task, fed by the
+`Json<InsertTask>` extractor, into the shared `AppData` database. There is not much more actix
+related code in there, it just uses the `InsertTask` to create a new `Task` by cloning each field.
+We need to call `clone` here because we access `InsertTask` inside `Json<T>` through a reference, so
+if we don't clone (or copy), then we'll get an error (move out of dereference).
+
+```rust
+// cannot move out of dereference of `actix_web::web::Json<InsertTask>`
+// move occurs because value has type `InsertTask`, which does not implement the `Copy` trait
+let insert_task = *input;
+```
+
+We do a quick validation check and return a `AppError::EmptyTitle` if `input` contains an empty
+`title`. Later on we'll have a more appropriate validation function. The rest of the function is
+just inserting the new `Task` in `AppData::task_list` and incrementing `AppData::id_tracker`.
+
+And in the end, we use the `HttpResponse::Ok().json` to build a response by converting `new_task`
+into json and putting it in the _body_ of the response.
+
+### 2.3.4 GET
+
+```rust
+#[get("/tasks")]
+async fn find_all(app_data: web::Data<AppData>) -> Result<HttpResponse, AppError>
+```
+
+Pretty basic, just grabs the "database" again and returns every `Task` in `AppData::task_list`.
+
+```rust
+#[get("/tasks/{id}")]
+async fn find_by_id(app_data: web::Data<AppData>, id: web::Path<u64>) -> Result<HttpResponse, AppError>
+```
+
+The first use of the `Path<T>` extractor, expecting a `u64` representing the `Task::id` we want to
+fetch.
+
+### 2.3.5 DELETE
+
+```rust
+#[delete("/tasks/{id}")]
+async fn delete(app_data: web::Data<AppData>, id: web::Path<u64>) -> Result<HttpResponse, AppError>
+```
+
+Again with `Path<u64>`, but this time we remove the `Task` from `AppData::task_list`.
+
+### 2.3.6 PUT
+
+```rust
+#[put("/tasks")]
+async fn update(app_data: web::Data<AppData> input: web::Json<UpdateTask>) -> Result<HttpResponse, AppError>
+```
+
+Similar to `insert`, but this time we use `Json<UpdateTask>`, which contains an _ID_.
+
+## 2.4 That's all folks
+
+`in-memory` already shows a lot of actix features, and you can see the structure of an actix web
+server taking form.
+
+Set up some routes (either with `get`, `post`, and friends, or the `route` macro), configure the
+services, implement the `ResponseError` trait (or convert your errors manually into response, do not
+recommend), and finally, create and run your `HttpServer`.
+
+On the next example ([`sqlite`](../sqlite/)) we'll be introducing tests, SQL and a more actix, stay
+tuned!

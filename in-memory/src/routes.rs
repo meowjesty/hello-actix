@@ -14,8 +14,8 @@ async fn insert(
     } else {
         let new_task = Task {
             id: app_data.id_tracker.load(Ordering::Relaxed),
-            title: input.non_empty_title.to_owned(),
-            details: input.details.to_owned(),
+            title: input.non_empty_title.clone(),
+            details: input.details.clone(),
         };
 
         let mut task_list = app_data
@@ -102,8 +102,8 @@ async fn update(
             .find(|t| t.id == input.id)
             .ok_or(AppError::IdNotFound(input.id))?;
 
-        task.title = input.new_title.to_owned();
-        task.details = input.details.to_owned();
+        task.title = input.new_title.clone();
+        task.details = input.details.clone();
 
         let response = HttpResponse::Ok().json(task);
         Ok(response)
