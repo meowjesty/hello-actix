@@ -6,6 +6,8 @@ A bunch of **To-do** web apps written with an increasing amount of features usin
 [actix-web](https://github.com/actix/actix-web) framework, and its friends in
 [actix-extras](https://github.com/actix/actix-extras).
 
+This uses the `actix-web: 4.0.0-beta` releases!
+
 ### Things to keep in mind
 
 The intention here is **not** to show how to implement a robust, **production** web service, these
