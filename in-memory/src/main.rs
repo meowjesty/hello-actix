@@ -29,6 +29,13 @@ struct UpdateTask {
     details: String,
 }
 
+
+#[derive(Serialize, Deserialize)]
+struct AppData {
+    id_tracker: AtomicU64,
+    task_list: Mutex<Vec<Task>>,
+}
+
 #[derive(Debug, Error)]
 enum AppError {
     #[error("`title` field of `Task` cannot be empty!")]
@@ -57,11 +64,6 @@ impl ResponseError for AppError {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct AppData {
-    id_tracker: AtomicU64,
-    task_list: Mutex<Vec<Task>>,
-}
 
 #[get("/")]
 async fn index() -> HttpResponse {
