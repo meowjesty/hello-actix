@@ -131,3 +131,53 @@ bunch of stuff: session management, authorization, [saying hi](https://actix.rs/
 and plenty more.
 
 ### 3.2.3 The `errors` module
+
+There are big 2 changes in our error handling approach.
+
+1. A new error type `TaskError` to handle our only validation case;
+2. The `#[from]` attribute, used to convert different error types into a `AppError`;
+
+### 3.2.4 The `models` module
+
+As I've said previously, we use `include_str!` to load the `*.sql` files into constant strings.
+
+Our `Task` struct fields look the same, except `id` is now `i64` to comply with SQLite.
+
+There is another change however, now it also derives `FromRow`. `sqlx` has a few functions to create
+a query, we'll be using [`sqlx::query`](https://docs.rs/sqlx/0.5.5/sqlx/fn.query.html) when we don't
+care about the result type, and [`sqlx::query_as`](https://docs.rs/sqlx/0.5.5/sqlx/fn.query_as.html)
+when we want to return a specific type, and this type must implement
+[`FromRow`](https://docs.rs/sqlx/0.5.5/sqlx/trait.FromRow.html).
+
+`InsertTask` and `UpdateTask` are about the same as they were before (only `id: i64` changed). Plus
+there is a new model `QueryTask` that will be used in a new route.
+
+Each model now has an implementation block to handle the database interaction. The functions all
+have pretty similar code, so I'll be doing a broad explanation of what's going on, instead of
+delving deep into each (they have more to do with `sqlx` than actix).
+
+- Every database altering function (`insert`, `update`, `delete`) first tries to acquire a
+   connection from the pool;
+- We call `query` or `query_as` to create a `Query` (or `QueryAs`) object with the SQL string;
+- Queries that require parameters have a
+   [`bind`](https://docs.rs/sqlx/0.5.5/sqlx/query/struct.Query.html#method.bind) function call with
+   the parameter value;
+- `execute` will run the query and return a
+  [`QueryResult`](https://docs.rs/sqlx/0.5.5/sqlx/trait.Database.html#associatedtype.QueryResult);
+- And the [`fetch`](https://docs.rs/sqlx/0.5.5/sqlx/query/struct.Query.html#method.fetch) family of
+  functions returns a [`Row`](https://docs.rs/sqlx/0.5.5/sqlx/trait.Database.html#associatedtype.Row)
+  instead, which is then converted into our `Task` type that derives `FromRow`;
+
+This covers most of the `impl` blocks but one:
+
+```rust
+impl Responder for Task
+```
+
+The [`Responder`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.Responder.html) trait is
+pretty much like `ResponseError`, with the main difference being that, it's not specific for errors.
+When we implement this for `Task`, we avoid having to manually convert `Task`s into some string that
+goes in the `HttpResponse::body`. Now we're getting this by default, even though we won't be taking
+much advantage of it (I want to show you some possible `HttpResponse`s). Note that the `respond_to`
+function gives you access to a reference `HttpRequest`, so you may extract whatever values are in
+there.
