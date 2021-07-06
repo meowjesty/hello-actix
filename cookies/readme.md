@@ -111,11 +111,84 @@ With this poor excuse of an explanation, we know have everything needed to imple
 fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future
 ```
 
+The function signature gives a good hint of what is supposed to happen here. We use `req` to get
+information out of the request, and `payload` contains the data we want to extract. Note that the
+return is `Self::Future`, and inside is our `Result<T, E>`.
 
+We're going to use
+[`JsonBody`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/enum.JsonBody.html) to keep our
+extraction process simple, as it provides a nice
+[`JsonBody::new`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/enum.JsonBody.html#method.new)
+function that does the heavy lifting of extracting a json from the request, payload pair.
+
+We then `map` the result of `JsonBody::new` to be of our appropriate type
+`Result<InsertTask, AppError>`, and finally, we call the new `InsertTask::validate` (or
+`UpdateTask::validate`) function that checks if the input doesn't have an empty `title` field.
+
+Lastly we use `boxed_local` to wrap our result in `Self::Future`.
+
+This trait is a "bit" more complicated than the others we've seen so far, if you want to dip deeper,
+I suggest you read the
+[`Json<T>`](https://docs.rs/actix-web/4.0.0-beta.8/src/actix_web/types/json.rs.html#136-158)
+implementation of `FromRequest`. There you'll see a `JsonConfig`, and a `JsonExtractFut` future. A
+true behind the scenes for your learning.
+
+Tired yet? Buckle up we're not finished, it's time to head into [routes](src/routes.rs).
+
+## 4.4 Route to the cookies
+
+I've promised you cookies, and I'll give you cookies! We have 2 new services being provided:
 
 ```rust
-// TODO(alex) 2021-07-06:
-// - FromRequest;
-// - CookieSession;
-// - #[get("/tasks/{id:\\d+}")] regex to avoid matching #[get("/tasks/favorite")];
+#[get("/tasks/favorite")]
+async fn find_favorite(session: Session) -> Result<impl Responder, AppError>
 ```
+
+Our first time seeing the
+[`Session`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html) extractor.
+It's our way of using the `CookieSession` and accessing the cookies.
+
+The `find_favorite` function just uses the
+[`session::get::<T>`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.get)
+ to find a cookie with the key `"favorite_task"`. In case there is none, we return the new
+ `TaskError::NoneFavorite`.
+
+```rust
+#[get("/tasks/favorite/{id}")]
+async fn favorite(db_pool: web::Data<SqlitePool>, session: Session, id: web::Path<i64>) -> Result<impl Responder, AppError>
+```
+
+This one is a bit more elaborate, as it first calls
+[`session.remove`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.remove)
+to, well, remove whatever `"favorite_task"` is stored in the cookie. It then goes into the database
+searching for a `Task` if the `Task::id` is different (this function toggles a _favorite_), when a
+`Task` is found we use
+[`session.insert`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.insert)
+to put the key (`&str`) value (`Task`) pair in the cookie.
+
+The last change of notice appears in `find_by_id`:
+
+```rust
+#[get("/tasks/{id:\\d+}")]
+async fn find_by_id(db_pool: web::Data<SqlitePool>, id: web::Path<i64>) -> Result<impl Responder, AppError>
+```
+
+The `/tasks/{id}` route changed to use a custom regex `d+` to match only digits. This was necessary
+to avoid a route conflict with `/tasks/favorite`. If you recall, `{id}` is actually a match-all
+regex, so there are 2 ways of solving this conflict:
+
+1. Either write a specific regex (what we did);
+2. Or set up the `cfg.service` in the appropriate order for the request extractors.
+
+If you go with option 2, and try to do a request that contains something that can be extracted via
+`Path<i64>`, then the route would match correctly.
+
+## 4.5 To be continued
+
+We've talked about using the `CookieSession` middleware to store cookies that are retrieved with the
+`Session` extractor. Dipped our cookies into the `FromRequest` trait, and left some crumbles on the
+`Future`.
+
+Hopefully you still have an appetite, because up next we'll be using new types of cookies to handle
+[login](../login/)! Leave it in the comments below, what's your favorite kind of cookie (mine is
+chocolate, boring I know).

@@ -99,7 +99,7 @@ async fn find_by_pattern(
 /// 1. Include a regex or a `guard` to check which route is the best representative for this type of
 /// request;
 /// 2. Order the routes during setup in a way that avoids conflicts, such as a `{id}` pattern, which
-// is the equivalent of the `[^/]+` regex.
+/// is the equivalent of the `[^/]+` regex.
 ///
 /// There is a 3rd way of sorts, which boils down to: avoid possible route conflicting paths.
 #[get("/tasks/{id:\\d+}")]
@@ -147,7 +147,7 @@ async fn favorite(
 
 #[get("/tasks/favorite")]
 async fn find_favorite(session: Session) -> Result<impl Responder, AppError> {
-    if let Some(task) = session.get::<Task>("favorite_task")? {
+    if let Some(task) = session.get::<Task>(FAVORITE_TASK_STR)? {
         Ok(HttpResponse::Found().json(task))
     } else {
         Err(TaskError::NoneFavorite.into())
@@ -185,7 +185,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(15)
             .connect_with(db_options)
             .await
             .unwrap();
