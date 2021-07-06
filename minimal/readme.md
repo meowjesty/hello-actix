@@ -1,6 +1,6 @@
 # 1. Minimal
 
-## 1.1 Drivers, start your servers
+## 1.1 Devs, start your servers
 
 To start sending our "Hello"s to the world with actix, we'll be using
 [`HttpServer`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpServer.html#), and
