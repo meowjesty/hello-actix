@@ -225,3 +225,86 @@ be confused with a database query. It handles requests containing query paramete
 Thus, we've concluded the modules tour, and now let's test some stuff!
 
 ## 3.3 Testing, testing, testing
+
+To test our actix services, we'll be adding a new `dev-dependency`:
+[actix-rt](https://github.com/actix/actix-net/tree/master/actix-rt). The
+[`acitx_rt::test`](https://docs.rs/actix-rt/2.2.0/actix_rt/attr.test.html) attribute creates a
+runtime for our tests.
+
+There is also the
+[`actix_web::test`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/index.html) module, that
+provides some nice testing facilities.
+
+### 3.3.1 Test: `main.rs`
+
+[`main.rs`](src/main.rs) tests will be focused on the `index` service.
+
+```rust
+#[actix_rt::test]
+async fn test_index_get
+```
+
+The test for a `GET` request, we use
+[`init_service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.init_service.html) to
+initialize the `index` service. This will set up our `App` and start running it.
+
+The [`TestRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html)
+builder helps us create an HTTP request. In this case `GET` with `/` path.
+
+We then use
+[`call_service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.call_service.html) passing
+it our `Request` to get a response (`ServiceResponse`).
+
+Finally, we just assert the response status code, expecting a successful status code.
+
+```rust
+#[actix_rt::test]
+async fn test_index_post
+```
+
+Almost exactly the same thing as our `GET` test, but now we're testing a `POST` with path `/`. This
+time our assertion expects an error status code.
+
+### 3.3.2 Test: `routes.rs`
+
+These tests are a bit more involved, we now have a `setup_data` function to create our test
+database. And every test will configure the `App` with only the appropriate services for each. So
+tests that require a `Task` to be present, will register both the `insert` service, plus whatever
+other service the test is checking.
+
+Let's take 2 tests to take a closer look:
+
+```rust
+#[actix_rt::test]
+async fn test_insert_valid
+```
+
+It starts calling `setup_data` to handle the database `Data<Pool>` creation, then we call
+`init_service` to create the app. We use `TestRequest::set_json` to insert our test `Task` as a json
+in the request body, and the rest follows the same pattern as the `index` test.
+
+```rust
+#[actix_rt::test]
+async fn test_update_valid
+```
+
+The only real difference here is that we do the whole `insert` procedure first, and only then we use
+the `update` service. This means that we must configure `App` with both `insert` and `update`
+services.
+
+These are the basics for testing an actix-web server. There is one piece that I'll leave unexplained
+here, as it doesn't have much to do with testing, the
+[`ServiceResponse::into_body`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/struct.ServiceResponse.html#method.into_body)
+function.
+
+## 3.4 Wrapping up
+
+On this project we dipped our toes in actix's `middleware`, we've seen how to test services, and
+learned a bit about how to use `sqlx` with actix.
+
+The `Responder` trait is a big one to know, and allows us to simply return `impl Responder` on the
+services.
+
+On the next project ([cookies](../cookies/)), we'll get familiar with another middleware, the
+[`CookieSession`](https://docs.rs/actix-session/0.4.1/actix_session/struct.CookieSession.html) from
+the [actix-session](https://github.com/actix/actix-extras/tree/master/actix-session) crate.

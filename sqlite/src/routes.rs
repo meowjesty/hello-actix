@@ -127,33 +127,11 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 #[cfg(test)]
 mod tests {
 
-    use actix_web::{
-        body::{Body, ResponseBody},
-        test, web, App,
-    };
+    use actix_web::{test, web, App};
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
     use super::*;
     use crate::create_database;
-
-    trait BodyTest {
-        fn as_str(&self) -> &str;
-    }
-
-    impl BodyTest for ResponseBody<Body> {
-        fn as_str(&self) -> &str {
-            match self {
-                ResponseBody::Body(ref b) => match b {
-                    Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
-                    _ => panic!(),
-                },
-                ResponseBody::Other(ref b) => match b {
-                    Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
-                    _ => panic!(),
-                },
-            }
-        }
-    }
 
     async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -161,7 +139,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(15)
             .connect_with(db_options)
             .await
             .unwrap();
