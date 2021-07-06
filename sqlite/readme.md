@@ -181,3 +181,47 @@ goes in the `HttpResponse::body`. Now we're getting this by default, even though
 much advantage of it (I want to show you some possible `HttpResponse`s). Note that the `respond_to`
 function gives you access to a reference `HttpRequest`, so you may extract whatever values are in
 there.
+
+It's time to look at the last remaining module: `routes`.
+
+### 3.2.5 The `routes` module
+
+The main change here is that now we have `Data<SqlitePool>`, instead of `Data<AppData>`, so each
+route may access the global database `Pool`.
+
+We've taken out most of the code to handle `Task` fiddling and moved it to `models`, the only piece
+remaining are the validation checks for refusing tasks with an empty `title`.
+
+The previous project was just return `HttpResponse::Ok`, but now we have a bit more variety:
+
+- [`HttpResponse::NotModified`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpResponse.html#method.NotModified);
+- [`HttpResponse::Found`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpResponse.html#method.Found);
+
+Another notable change is that most routes now have `Result<impl Responder, AppError>`, instead of
+`Result<HttpResponse, AppError>`. We're using the `Responder` trait as the return type, this means
+that we may return a `Ok(x)` as long as `x` implements `Responder`, which our `Task` does (check
+out the `find_by_id` function).
+
+```rust
+#[post("/tasks/{id}/done")]
+async fn done(db_pool: web::Data<SqlitePool>, id: web::Path<i64>) -> Result<impl Responder, AppError>
+
+#[delete("/tasks/{id}/undo")]
+async fn undo(db_pool: web::Data<SqlitePool>, id: web::Path<i64>) -> Result<impl Responder, AppError>
+```
+
+These are two new services to mark a `Task` as done, and to undo this operation.
+
+```rust
+#[get("/tasks")]
+async fn find_by_pattern(db_pool: web::Data<SqlitePool>, pattern: web::Query<QueryTask>) -> Result<impl Responder, AppError>
+```
+
+Lastly, we now use the actix
+[`Query`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.Query.html) extractor, not to
+be confused with a database query. It handles requests containing query parameters and just as the
+`Json<T>` will try to convert `T` into our `QueryTask` type.
+
+Thus, we've concluded the modules tour, and now let's test some stuff!
+
+## 3.3 Testing, testing, testing
