@@ -44,10 +44,33 @@ A brief introduction:
   implementations;
 - [users::routes](src/users/routes.rs) also has much of the same looking code;
 
-### 5.3.1 The `LoginUser` struct
+### 5.3.1 Logging in and logging out
+
+There are 2 `login` functions, one in `LoginUser::login` that handles the database search for a
+matching `username`, `password`, and a service `"/users/login"`.
+
+`LoginUser::login` isn't very interesting, as it just tries to find a `User` in the database that
+has the `username` and `password` trying to log in. We store `User` data as plaintext, so the whole
+process is pretty straightforward.
 
 ```rust
-// TODO(alex) 2021-07-06:
-// - New `users` module;
-// - IdentityService cookies to handle login
+#[post("/users/login")]
+async fn login(db_pool: web::Data<SqlitePool>, identity: Identity, input: web::Json<LoginUser>) -> Result<impl Responder, AppError>
+
+#[post("/users/logout")]
+async fn logout(identity: Identity) -> impl Responder
 ```
+
+This is our first time meeting the `Identity` extractor. We'll be using the pair of
+[`Identity::remember`](https://docs.rs/actix-identity/0.4.0-beta.2/actix_identity/struct.Identity.html#method.remember)
+and [`Identity::forget`](https://docs.rs/actix-identity/0.4.0-beta.2/actix_identity/struct.Identity.html#method.forget)
+to handle login and logout respectively.
+
+These 2 services are the driving force behind this project. We're not doing anything elaborate with
+our logged user.
+
+## 5.4 On the next episode
+
+The project had some major file re-structuring, but the core concepts remained the same. We'll be
+using the `"auth-cookie"` to help with blocking some routes on the [authorization](../authorization)
+project. Stay tuned.
