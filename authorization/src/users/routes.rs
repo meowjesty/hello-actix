@@ -26,9 +26,9 @@ async fn update(
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No users were updated."))
     } else {
-        Ok(HttpResponse::Created().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Updated {} users.", num_modified)))
     }
 }
 
@@ -40,9 +40,9 @@ async fn delete(
     let num_modified = User::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No users were deleted."))
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Deleted {} users.", num_modified)))
     }
 }
 
@@ -63,7 +63,11 @@ async fn find_by_id(
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
     let user = User::find_by_id(db_pool.get_ref(), *id).await?;
-    Ok(user)
+
+    match user {
+        Some(user) => Ok(HttpResponse::Found().json(user)),
+        None => Err(UserError::NotFound(*id).into()),
+    }
 }
 
 #[post("/users/login", wrap = "HttpAuthentication::bearer(validator)")]
@@ -72,13 +76,14 @@ async fn login(
     identity: Identity,
     input: web::Json<LoginUser>,
 ) -> Result<impl Responder, AppError> {
-    let user = input.into_inner().login(&db_pool).await?;
+    let login_user = input.into_inner();
+    let user = login_user.login(&db_pool).await?;
     match user {
         Some(user) => {
             identity.remember(serde_json::to_string_pretty(&user)?);
             Ok(user)
         }
-        None => Err(UserError::NotFound(-100000).into()),
+        None => Err(UserError::LoginFailed.into()),
     }
 }
 
