@@ -32,7 +32,7 @@ async fn update(
     }
 }
 
-#[delete("/users/{id}", wrap = "HttpAuthentication::bearer(validator)")]
+#[delete("/users/{id:\\d+}", wrap = "HttpAuthentication::bearer(validator)")]
 async fn delete(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,

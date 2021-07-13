@@ -110,7 +110,7 @@ Content-Type: application/json
 ###
 
 # @name logout
-POST {{baseUrl}}/users/logout HTTP/1.1
+DELETE {{baseUrl}}/users/logout HTTP/1.1
 Authorization: Bearer {{auth_token}}
 
 ###
@@ -230,12 +230,12 @@ Content-Type: application/json
 ###
 
 # @name favorite
-GET {{baseUrl}}/tasks/favorite/1 HTTP/1.1
+POST {{baseUrl}}/tasks/favorite/1 HTTP/1.1
 
 ###
 
 # @name favorite_non_existant_task
-GET {{baseUrl}}/tasks/favorite/10000 HTTP/1.1
+POST {{baseUrl}}/tasks/favorite/10000 HTTP/1.1
 
 ###
 

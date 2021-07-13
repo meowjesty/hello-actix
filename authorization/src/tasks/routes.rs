@@ -131,7 +131,7 @@ async fn find_by_id(
 
 const FAVORITE_TASK_STR: &'static str = "favorite_task";
 
-#[get("/tasks/favorite/{id}")]
+#[post("/tasks/favorite/{id}")]
 async fn favorite(
     db_pool: web::Data<SqlitePool>,
     session: Session,
