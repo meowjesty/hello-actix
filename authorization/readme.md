@@ -1,5 +1,8 @@
 # 6 Authorization
 
+TODO(alex) 2021-07-13: This project changed quite a bit with the use of Bearer authentication, it
+requires a decent rewrite.
+
 ## 6.1 The tour that never ends
 
 We've been through a lot of `actix-web` and `actix-extras` so far. Hopefully you've learned enough
