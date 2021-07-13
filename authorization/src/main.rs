@@ -1,18 +1,10 @@
-use std::convert::TryInto;
-
-use actix_identity::{CookieIdentityPolicy, Identity, IdentityService, RequestIdentity};
+use actix_identity::{CookieIdentityPolicy, IdentityService, RequestIdentity};
 use actix_session::CookieSession;
 use actix_web::{
-    dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, FromRequest,
-    HttpResponse, HttpServer, Responder,
+    dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, HttpResponse,
+    HttpServer, Responder,
 };
-use actix_web_httpauth::{
-    extractors::{
-        basic::{BasicAuth, Config},
-        bearer::BearerAuth,
-    },
-    middleware::HttpAuthentication,
-};
+use actix_web_httpauth::extractors::{basic::Config, bearer::BearerAuth};
 use errors::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tasks::routes::task_service;
