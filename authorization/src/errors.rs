@@ -48,6 +48,7 @@ impl ResponseError for AppError {
                 UserError::NotLoggedIn => actix_web::http::StatusCode::UNAUTHORIZED,
                 UserError::Empty => actix_web::http::StatusCode::NOT_FOUND,
                 UserError::LoginFailed => actix_web::http::StatusCode::NOT_FOUND,
+                UserError::InvalidToken => actix_web::http::StatusCode::UNAUTHORIZED,
             },
             AppError::Database(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Json(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,

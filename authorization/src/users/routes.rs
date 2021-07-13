@@ -70,7 +70,18 @@ async fn find_by_id(
     }
 }
 
-#[post("/users/login", wrap = "HttpAuthentication::bearer(validator)")]
+pub(crate) fn create_auth_token(user: &User) -> u64 {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
+    let mut hasher = DefaultHasher::new();
+    user.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[post("/users/login")]
 async fn login(
     db_pool: web::Data<SqlitePool>,
     identity: Identity,
@@ -80,8 +91,17 @@ async fn login(
     let user = login_user.login(&db_pool).await?;
     match user {
         Some(user) => {
-            identity.remember(serde_json::to_string_pretty(&user)?);
-            Ok(user)
+            let auth_token = create_auth_token(&user);
+            let logged_user = user.to_logged(auth_token);
+
+            // NOTE(alex): We'll use this identity cookie to check if the user is logged in for
+            // routes that require it.
+            identity.remember(serde_json::to_string_pretty(&logged_user)?);
+
+            let response: HttpResponse = HttpResponse::Ok()
+                .append_header(("X-Auth-Token", auth_token.to_string()))
+                .json(logged_user);
+            Ok(response)
         }
         None => Err(UserError::LoginFailed.into()),
     }

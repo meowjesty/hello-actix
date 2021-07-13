@@ -37,6 +37,9 @@ pub(crate) enum UserError {
     #[error("User is not logged in!")]
     NotLoggedIn,
 
+    #[error("Invalid authorization token!")]
+    InvalidToken,
+
     #[error("Could not find any `User`!")]
     Empty,
 }

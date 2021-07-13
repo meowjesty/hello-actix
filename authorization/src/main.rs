@@ -1,15 +1,23 @@
-use actix_identity::{CookieIdentityPolicy, IdentityService};
+use std::convert::TryInto;
+
+use actix_identity::{CookieIdentityPolicy, Identity, IdentityService, RequestIdentity};
 use actix_session::CookieSession;
 use actix_web::{
-    dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, HttpResponse,
-    HttpServer, Responder,
+    dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, FromRequest,
+    HttpResponse, HttpServer, Responder,
 };
-use actix_web_httpauth::{extractors::{basic::{BasicAuth, Config}, bearer::BearerAuth}, middleware::HttpAuthentication};
+use actix_web_httpauth::{
+    extractors::{
+        basic::{BasicAuth, Config},
+        bearer::BearerAuth,
+    },
+    middleware::HttpAuthentication,
+};
 use errors::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tasks::routes::task_service;
 use time::Duration;
-use users::routes::user_service;
+use users::{models::LoggedUser, routes::user_service};
 
 use crate::users::errors::UserError;
 
@@ -44,20 +52,16 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
 
 pub(crate) async fn validator(
     req: ServiceRequest,
-    _credentials: BearerAuth,
+    credentials: BearerAuth,
 ) -> Result<ServiceRequest, Error> {
-    if req.method() == "GET"
-        || req.path().contains("login")
-        || req.path().contains("register")
-        || req.cookie("auth-cookie").is_some()
-    {
-        // NOTE(alex): Authorize:
-        // - GET requests are always authorized;
-        // - login route;
-        // - register route;
-        // - register route;
-        // - have an `auth-cookie` set (this indicates logged in user for us);
-        Ok(req)
+    if let Some(identity) = req.get_identity() {
+        let logged_user: LoggedUser = serde_json::from_str(&identity)?;
+
+        // NOTE(alex) Return `Ok(request)` if the token match our logged user's token, otherwise it
+        // returns an `Err`.
+        (credentials.token() == logged_user.token.to_string())
+            .then(|| req)
+            .ok_or(ErrorUnauthorized(UserError::InvalidToken))
     } else {
         Err(ErrorUnauthorized(UserError::NotLoggedIn))
     }

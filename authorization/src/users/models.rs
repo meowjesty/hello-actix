@@ -12,7 +12,7 @@ use crate::errors::AppError;
 pub(crate) const MIN_USERNAME_LENGTH: usize = 3;
 pub(crate) const MIN_PASSWORD_LENGTH: usize = 4;
 
-#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug, Serialize, Deserialize, FromRow)]
 pub(crate) struct User {
     pub(crate) id: i64,
     pub(crate) username: String,
@@ -35,6 +35,14 @@ pub(crate) struct UpdateUser {
 pub(crate) struct LoginUser {
     pub(crate) username: String,
     pub(crate) password: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
+pub(crate) struct LoggedUser {
+    pub(crate) id: i64,
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) token: u64,
 }
 
 impl InsertUser {
@@ -132,6 +140,15 @@ impl User {
             .await?;
 
         Ok(result)
+    }
+
+    pub(crate) fn to_logged(self, token: u64) -> LoggedUser {
+        LoggedUser {
+            id: self.id,
+            username: self.username,
+            password: self.password,
+            token,
+        }
     }
 }
 
