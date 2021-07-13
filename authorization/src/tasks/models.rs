@@ -97,14 +97,14 @@ impl Task {
         Ok(result.rows_affected())
     }
 
-    pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<u64, AppError> {
+    pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<i64, AppError> {
         let mut connection = pool.acquire().await?;
         let result = sqlx::query(COMPLETED)
             .bind(task_id)
             .execute(&mut connection)
             .await?;
 
-        Ok(result.rows_affected())
+        Ok(result.last_insert_rowid())
     }
 
     pub(crate) async fn undo(db_pool: &SqlitePool, task_id: i64) -> Result<u64, AppError> {

@@ -23,9 +23,9 @@ async fn update(
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No tasks were updated."))
     } else {
-        Ok(HttpResponse::Created().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Updated {} tasks.", num_modified)))
     }
 }
 
@@ -37,9 +37,9 @@ async fn delete(
     let num_modified = Task::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No tasks were deleted."))
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Deleted {} tasks.", num_modified)))
     }
 }
 
@@ -48,12 +48,12 @@ async fn done(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
-    let created_id = Task::done(db_pool.get_ref(), *id).await?;
+    let done_id = Task::done(db_pool.get_ref(), *id).await?;
 
-    if created_id == 0 {
-        Ok(HttpResponse::NotModified().finish())
+    if done_id == 0 {
+        Ok(HttpResponse::NotModified().body(format!("Task with id {} not done.", id)))
     } else {
-        Ok(HttpResponse::Created().body(created_id.to_string()))
+        Ok(HttpResponse::Created().body(done_id.to_string()))
     }
 }
 
@@ -65,9 +65,9 @@ async fn undo(
     let num_modified = Task::undo(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body(format!("Task with id {} not undone.", id)))
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Undone {} tasks.", num_modified)))
     }
 }
 
@@ -85,7 +85,12 @@ async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppE
 #[get("/tasks/ongoing")]
 async fn find_ongoing(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_ongoing(db_pool.get_ref()).await?;
-    Ok(HttpResponse::Found().json(&tasks))
+
+    if tasks.is_empty() {
+        Err(TaskError::Empty.into())
+    } else {
+        Ok(HttpResponse::Found().json(&tasks))
+    }
 }
 
 #[get("/tasks")]
@@ -117,7 +122,11 @@ async fn find_by_id(
     id: web::Path<i64>,
 ) -> Result<impl Responder, AppError> {
     let task = Task::find_by_id(db_pool.get_ref(), *id).await?;
-    Ok(task)
+
+    match task {
+        Some(task) => Ok(HttpResponse::Found().json(task)),
+        None => Err(TaskError::NotFound(*id).into()),
+    }
 }
 
 const FAVORITE_TASK_STR: &'static str = "favorite_task";
@@ -133,7 +142,7 @@ async fn favorite(
 
         if old_favorite.id == *id {
             // NOTE(alex): Just remove the task, this is basically "unfavorite".
-            Ok(HttpResponse::NoContent().finish())
+            Ok(HttpResponse::NoContent().body(format!("Task {} unfavorited", old_favorite.id)))
         } else {
             match Task::find_by_id(&db_pool, *id).await? {
                 Some(task) => {
@@ -156,7 +165,7 @@ async fn favorite(
 
 #[get("/tasks/favorite")]
 async fn find_favorite(session: Session) -> Result<impl Responder, AppError> {
-    if let Some(task) = session.get::<Task>("favorite_task")? {
+    if let Some(task) = session.get::<Task>(FAVORITE_TASK_STR)? {
         Ok(HttpResponse::Found().json(task))
     } else {
         Err(TaskError::NoneFavorite.into())
