@@ -4,10 +4,7 @@ use actix_web::{
     dev::ServiceRequest, error::ErrorUnauthorized, get, middleware, App, Error, HttpResponse,
     HttpServer, Responder,
 };
-use actix_web_httpauth::{
-    extractors::basic::{BasicAuth, Config},
-    middleware::HttpAuthentication,
-};
+use actix_web_httpauth::{extractors::{basic::{BasicAuth, Config}, bearer::BearerAuth}, middleware::HttpAuthentication};
 use errors::AppError;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tasks::routes::task_service;
@@ -45,7 +42,10 @@ async fn create_database(db_pool: &SqlitePool) -> Result<String, AppError> {
     Ok(result.rows_affected().to_string())
 }
 
-async fn validator(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, Error> {
+pub(crate) async fn validator(
+    req: ServiceRequest,
+    _credentials: BearerAuth,
+) -> Result<ServiceRequest, Error> {
     if req.method() == "GET"
         || req.path().contains("login")
         || req.path().contains("register")
@@ -90,6 +90,12 @@ pub async fn main() -> std::io::Result<()> {
             .service(index)
             .configure(task_service)
             .configure(user_service)
+            .wrap(IdentityService::new(
+                CookieIdentityPolicy::new(&[0; 32])
+                    .name("auth-cookie")
+                    .login_deadline(Duration::seconds(120))
+                    .secure(false),
+            ))
             .wrap(
                 CookieSession::signed(&[0; 32])
                     .name("session-cookie")
@@ -98,14 +104,6 @@ pub async fn main() -> std::io::Result<()> {
                     .expires_in_time(Duration::seconds(60)),
             )
             .wrap(middleware::Logger::default())
-            .wrap(IdentityService::new(
-                CookieIdentityPolicy::new(&[0; 32])
-                    .name("auth-cookie")
-                    .login_deadline(Duration::seconds(120))
-                    .secure(false),
-            ))
-            // NOTE(alex): Doing this makes the whole application require authorization.
-            .wrap(HttpAuthentication::basic(validator))
     })
     .bind(env!("ADDRESS"))?
     .run()

@@ -1,12 +1,13 @@
 use actix_identity::Identity;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web_httpauth::middleware::HttpAuthentication;
 use sqlx::SqlitePool;
 
 use super::{
     errors::UserError,
     models::{InsertUser, LoginUser, UpdateUser, User},
 };
-use crate::errors::AppError;
+use crate::{errors::AppError, validator};
 
 #[post("/users/register")]
 async fn insert(
@@ -17,7 +18,7 @@ async fn insert(
     Ok(HttpResponse::Created().json(user))
 }
 
-#[put("/users")]
+#[put("/users", wrap = "HttpAuthentication::bearer(validator)")]
 async fn update(
     db_pool: web::Data<SqlitePool>,
     input: UpdateUser,
@@ -31,7 +32,7 @@ async fn update(
     }
 }
 
-#[delete("/users/{id}")]
+#[delete("/users/{id}", wrap = "HttpAuthentication::bearer(validator)")]
 async fn delete(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
@@ -65,7 +66,7 @@ async fn find_by_id(
     Ok(user)
 }
 
-#[post("/users/login")]
+#[post("/users/login", wrap = "HttpAuthentication::bearer(validator)")]
 async fn login(
     db_pool: web::Data<SqlitePool>,
     identity: Identity,
@@ -81,7 +82,7 @@ async fn login(
     }
 }
 
-#[post("/users/logout")]
+#[delete("/users/logout", wrap = "HttpAuthentication::bearer(validator)")]
 async fn logout(identity: Identity) -> impl Responder {
     identity.forget();
     HttpResponse::Ok().body("Logged out.")

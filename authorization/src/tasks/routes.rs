@@ -1,11 +1,12 @@
 use actix_session::Session;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
+use actix_web_httpauth::middleware::HttpAuthentication;
 use sqlx::SqlitePool;
 
 use super::{errors::*, models::*};
-use crate::errors::AppError;
+use crate::{errors::AppError, validator};
 
-#[post("/tasks")]
+#[post("/tasks", wrap = "HttpAuthentication::bearer(validator)")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
     input: InsertTask,
@@ -14,7 +15,7 @@ async fn insert(
     Ok(HttpResponse::Created().json(task))
 }
 
-#[put("/tasks")]
+#[put("/tasks", wrap = "HttpAuthentication::bearer(validator)")]
 async fn update(
     db_pool: web::Data<SqlitePool>,
     input: UpdateTask,
@@ -28,7 +29,7 @@ async fn update(
     }
 }
 
-#[delete("/tasks/{id}")]
+#[delete("/tasks/{id}", wrap = "HttpAuthentication::bearer(validator)")]
 async fn delete(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
@@ -42,7 +43,7 @@ async fn delete(
     }
 }
 
-#[post("/tasks/{id}/done")]
+#[post("/tasks/{id}/done", wrap = "HttpAuthentication::bearer(validator)")]
 async fn done(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
@@ -56,7 +57,7 @@ async fn done(
     }
 }
 
-#[delete("/tasks/{id}/undo")]
+#[delete("/tasks/{id}/undo", wrap = "HttpAuthentication::bearer(validator)")]
 async fn undo(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
