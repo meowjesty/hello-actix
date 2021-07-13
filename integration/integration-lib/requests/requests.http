@@ -1,0 +1,248 @@
+@baseUrl = http://127.0.0.1:8080
+
+@auth_token = {{login.response.headers.x-auth-token}}
+
+################## General requests
+
+# @name get_index
+GET {{baseUrl}} HTTP/1.1
+
+###
+
+################## User requests
+
+###
+
+# @name insert_user
+POST {{baseUrl}}/users/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "valid_username": "user",
+    "valid_password": "plaintext"
+}
+
+###
+
+# @name delete_user
+DELETE  {{baseUrl}}/users/1 HTTP/1.1
+Authorization: Bearer {{auth_token}}
+
+###
+
+# @name delete_non_existant_user
+DELETE  {{baseUrl}}/users/1000 HTTP/1.1
+Authorization: Bearer {{auth_token}}
+
+###
+
+# @name find_all_users
+GET {{baseUrl}}/users HTTP/1.1
+
+####
+
+# @name find_user_by_id
+GET {{baseUrl}}/users/1 HTTP/1.1
+
+###
+
+# @name update_user
+PUT {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "user",
+    "valid_password": "plaintext"
+}
+
+###
+
+# @name update_invalid_user_username
+PUT {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "",
+    "valid_password": "plaintext"
+}
+
+###
+
+# @name update_empty_user_valid_password
+PUT {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "valid_username": "upuser",
+    "valid_password": "plaintext"
+}
+
+###
+
+# @name update_non_existant_user
+PUT {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": "",
+    "valid_username": "upuser",
+    "valid_password": "plaintext"
+}
+
+###
+
+# @name login
+POST {{baseUrl}}/users/login HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "user",
+    "password": "plaintext"
+}
+
+###
+
+# @name logout
+DELETE {{baseUrl}}/users/logout HTTP/1.1
+Authorization: Bearer {{auth_token}}
+
+###
+
+################## Task requests
+
+###
+
+# @name insert_task
+POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "non_empty_title": "Todo",
+    "details": "Some details"
+}
+
+####
+
+# @name insert_invalid_task_title
+POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "non_empty_title": "",
+    "details": "Some details"
+}
+
+####
+
+# @name insert_empty_task_details
+POST {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "non_empty_title": "Todo",
+    "details": ""
+}
+
+###
+
+# @name delete_task
+DELETE  {{baseUrl}}/tasks/1 HTTP/1.1
+Authorization: Bearer {{auth_token}}
+
+###
+
+# @name delete_non_existant_task
+DELETE  {{baseUrl}}/tasks/1000 HTTP/1.1
+Authorization: Bearer {{auth_token}}
+
+###
+
+# @name find_all_tasks
+GET {{baseUrl}}/tasks HTTP/1.1
+
+###
+
+# @name find_task_by_id
+GET {{baseUrl}}/tasks/1 HTTP/1.1
+
+###
+
+# @name update_task
+PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "new_title": "Todo Updated",
+    "details": "Some details Updated"
+}
+
+###
+
+# @name update_invalid_task_title
+PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "new_title": "",
+    "details": "Some details Updated"
+}
+
+####
+
+# @name update_empty_task_details
+PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "new_title": "Todo Updated",
+    "details": ""
+}
+
+###
+
+# @name update_non_existant_task
+PUT {{baseUrl}}/tasks HTTP/1.1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+    "id": "",
+    "new_title": "Todo Updated",
+    "details": ""
+}
+
+###
+
+# @name favorite
+POST {{baseUrl}}/tasks/favorite/1 HTTP/1.1
+
+###
+
+# @name favorite_non_existant_task
+POST {{baseUrl}}/tasks/favorite/10000 HTTP/1.1
+
+###
+
+# @name find_favorite
+GET {{baseUrl}}/tasks/favorite HTTP/1.1
+
+###
+
+
+

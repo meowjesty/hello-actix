@@ -7,5 +7,7 @@ members = [
     "cookies",
     "login",
     "authorization",
+    "integration",
+    "integration/integration-lib",
     "experiments",
 ]
