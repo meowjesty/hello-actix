@@ -86,7 +86,7 @@ pub async fn start_app() -> std::io::Result<()> {
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(&[0; 32])
                     .name("auth-cookie")
-                    .login_deadline(Duration::seconds(120))
+                    .login_deadline(Duration::minutes(5))
                     .secure(false),
             ))
             .wrap(
@@ -94,7 +94,7 @@ pub async fn start_app() -> std::io::Result<()> {
                     .name("session-cookie")
                     .secure(false)
                     // WARNING(alex): This uses the `time` crate, not `std::time`!
-                    .expires_in_time(Duration::seconds(60)),
+                    .expires_in_time(Duration::minutes(5)),
             )
             .wrap(middleware::Logger::default())
     })

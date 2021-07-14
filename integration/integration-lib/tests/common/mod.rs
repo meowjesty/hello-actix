@@ -1,6 +1,6 @@
 use actix_web::web;
 use integration_lib::create_database;
-use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 pub async fn setup_data() -> web::Data<Pool<Sqlite>> {
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()

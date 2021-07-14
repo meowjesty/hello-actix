@@ -2,20 +2,30 @@ mod common;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
-use actix_web::{dev::AnyBody, test, web, App};
+use actix_web::{
+    cookie::Cookie,
+    dev::{AnyBody, ServiceResponse},
+    http::header::{self, Header, IntoHeaderPair},
+    test,
+    web::{self},
+    App, HttpResponse,
+};
 use common::setup_data;
 use integration_lib::{
     tasks::{
         models::{InsertTask, Task, UpdateTask},
         routes::{delete as task_delete, insert as task_insert, update as task_update},
     },
-    users::routes::{insert as user_insert, login},
+    users::{
+        models::{InsertUser, LoggedUser, LoginUser, User},
+        routes::{insert as user_insert, login},
+    },
 };
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use time::Duration;
 
 #[actix_rt::test]
-pub async fn test_task_insert_valid() {
+pub async fn test_task_insert_valid_task() {
     let data = setup_data().await;
     let app = App::new()
         .app_data(data.clone())
@@ -25,21 +35,55 @@ pub async fn test_task_insert_valid() {
         .wrap(IdentityService::new(
             CookieIdentityPolicy::new(&[0; 32])
                 .name("auth-cookie")
-                .login_deadline(Duration::seconds(120))
+                .login_deadline(Duration::minutes(10))
                 .secure(false),
         ));
     let mut app = test::init_service(app).await;
 
-    // TODO(alex) [high] 2021-07-13: Register user, login, and insert task.
+    let logged_user = {
+        let new_user = InsertUser {
+            valid_username: "spike".to_string(),
+            valid_password: "vicious".to_string(),
+        };
+        let register_user_request = test::TestRequest::post()
+            .uri("/users/register")
+            .set_json(&new_user)
+            .to_request();
+        let register_user_service_response: ServiceResponse =
+            test::call_service(&mut app, register_user_request).await;
+        assert!(register_user_service_response.status().is_success());
 
-    let valid_insert = InsertTask {
-        non_empty_title: "Valid title".to_string(),
-        details: "details".to_string(),
+        let user: User = test::read_body_json(register_user_service_response).await;
+        let login_user = LoginUser {
+            username: user.username,
+            password: user.password,
+        };
+        let login_request = test::TestRequest::post()
+            .uri("/users/login")
+            .set_json(&login_user)
+            .to_request();
+        let login_service_response: ServiceResponse =
+            test::call_service(&mut app, login_request).await;
+        assert!(login_service_response.status().is_success());
+
+        let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
+        logged_user
     };
 
+    let valid_insert_task = InsertTask {
+        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+        details: "It's a good show.".to_string(),
+    };
+
+    let bearer_token = format!("Bearer {}", logged_user.token);
     let request = test::TestRequest::post()
         .uri("/tasks")
-        .set_json(&valid_insert)
+        .insert_header(
+            ("Authorization".to_string(), bearer_token)
+                .try_into_header_pair()
+                .expect("Invalid header type (authorization)!"),
+        )
+        .set_json(&valid_insert_task)
         .to_request();
     let response = test::call_service(&mut app, request).await;
 
