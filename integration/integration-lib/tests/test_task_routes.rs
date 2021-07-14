@@ -1,10 +1,12 @@
 mod common;
 
+use std::convert::TryFrom;
+
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
 use actix_web::{
     cookie::Cookie,
-    dev::{AnyBody, ServiceResponse},
+    dev::{AnyBody, Service, ServiceResponse},
     http::header::{self, Header, IntoHeaderPair},
     test,
     web::{self},
@@ -40,6 +42,7 @@ pub async fn test_task_insert_valid_task() {
         ));
     let mut app = test::init_service(app).await;
 
+    let mut id_cookies = Vec::with_capacity(2);
     let logged_user = {
         let new_user = InsertUser {
             valid_username: "spike".to_string(),
@@ -65,6 +68,10 @@ pub async fn test_task_insert_valid_task() {
         let login_service_response: ServiceResponse =
             test::call_service(&mut app, login_request).await;
         assert!(login_service_response.status().is_success());
+        let cookies = login_service_response.response().clone().cookies();
+        for cookie in cookies {
+            id_cookies.push(cookie.to_string());
+        }
 
         let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
         logged_user
@@ -76,13 +83,11 @@ pub async fn test_task_insert_valid_task() {
     };
 
     let bearer_token = format!("Bearer {}", logged_user.token);
+    let cookie = Cookie::parse_encoded(id_cookies.remove(0)).unwrap();
     let request = test::TestRequest::post()
         .uri("/tasks")
-        .insert_header(
-            ("Authorization".to_string(), bearer_token)
-                .try_into_header_pair()
-                .expect("Invalid header type (authorization)!"),
-        )
+        .insert_header(("Authorization".to_string(), bearer_token))
+        .cookie(cookie)
         .set_json(&valid_insert_task)
         .to_request();
     let response = test::call_service(&mut app, request).await;
