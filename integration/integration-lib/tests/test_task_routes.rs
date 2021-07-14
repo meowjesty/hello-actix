@@ -28,6 +28,8 @@ use time::Duration;
 
 #[actix_rt::test]
 pub async fn test_task_insert_valid_task() {
+    // TODO(alex) [high] 2021-07-14: Everything up to the last request creation could be extracted
+    // from here, a macro will probably do the trick.
     let data = setup_data().await;
     let app = App::new()
         .app_data(data.clone())
@@ -42,7 +44,7 @@ pub async fn test_task_insert_valid_task() {
         ));
     let mut app = test::init_service(app).await;
 
-    let (cookies_str, logged_user) = {
+    let (cookies, bearer_token) = {
         let new_user = InsertUser {
             valid_username: "spike".to_string(),
             valid_password: "vicious".to_string(),
@@ -74,7 +76,11 @@ pub async fn test_task_insert_valid_task() {
             .collect::<String>();
 
         let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
-        (cookies_str, logged_user)
+
+        let bearer_token = format!("Bearer {}", logged_user.token);
+        let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+        (cookies, bearer_token)
     };
 
     let valid_insert_task = InsertTask {
@@ -82,8 +88,6 @@ pub async fn test_task_insert_valid_task() {
         details: "It's a good show.".to_string(),
     };
 
-    let bearer_token = format!("Bearer {}", logged_user.token);
-    let cookies = Cookie::parse_encoded(cookies_str).unwrap();
     let request = test::TestRequest::post()
         .uri("/tasks")
         .insert_header(("Authorization".to_string(), bearer_token))
