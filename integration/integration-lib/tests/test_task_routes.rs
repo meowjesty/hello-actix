@@ -42,8 +42,7 @@ pub async fn test_task_insert_valid_task() {
         ));
     let mut app = test::init_service(app).await;
 
-    let mut id_cookies = Vec::with_capacity(2);
-    let logged_user = {
+    let (cookies_str, logged_user) = {
         let new_user = InsertUser {
             valid_username: "spike".to_string(),
             valid_password: "vicious".to_string(),
@@ -68,13 +67,14 @@ pub async fn test_task_insert_valid_task() {
         let login_service_response: ServiceResponse =
             test::call_service(&mut app, login_request).await;
         assert!(login_service_response.status().is_success());
-        let cookies = login_service_response.response().clone().cookies();
-        for cookie in cookies {
-            id_cookies.push(cookie.to_string());
-        }
+
+        let cookies = login_service_response.response().cookies();
+        let cookies_str = cookies
+            .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+            .collect::<String>();
 
         let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
-        logged_user
+        (cookies_str, logged_user)
     };
 
     let valid_insert_task = InsertTask {
@@ -83,11 +83,11 @@ pub async fn test_task_insert_valid_task() {
     };
 
     let bearer_token = format!("Bearer {}", logged_user.token);
-    let cookie = Cookie::parse_encoded(id_cookies.remove(0)).unwrap();
+    let cookies = Cookie::parse_encoded(cookies_str).unwrap();
     let request = test::TestRequest::post()
         .uri("/tasks")
         .insert_header(("Authorization".to_string(), bearer_token))
-        .cookie(cookie)
+        .cookie(cookies)
         .set_json(&valid_insert_task)
         .to_request();
     let response = test::call_service(&mut app, request).await;
