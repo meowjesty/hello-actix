@@ -1,16 +1,8 @@
 mod common;
 
-use std::convert::TryFrom;
-
 use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_session::CookieSession;
 use actix_web::{
-    cookie::Cookie,
-    dev::{AnyBody, Service, ServiceResponse},
-    http::header::{self, Header, IntoHeaderPair},
-    test,
-    web::{self, ServiceConfig},
-    App, HttpResponse,
+    cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
 };
 use common::setup_data;
 use integration_lib::{
@@ -23,13 +15,12 @@ use integration_lib::{
         routes::{find_by_id as user_find_by_id, insert as user_insert, login},
     },
 };
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use time::Duration;
 
+// NOTE(alex): I'm leaving this function without the `setup_app` macro to make messing with it
+// easier.
 #[actix_rt::test]
 pub async fn test_task_insert_valid_task() {
-    // TODO(alex) [high] 2021-07-14: Everything up to the last request creation could be extracted
-    // from here, a macro will probably do the trick.
     let data = setup_data().await;
     let app = App::new()
         .app_data(data.clone())
@@ -48,28 +39,19 @@ pub async fn test_task_insert_valid_task() {
     let mut app = test::init_service(app).await;
 
     let (cookies, bearer_token) = {
-        let find_user_request = test::TestRequest::get().uri("/users/1").to_request();
-        let find_user_service_response: ServiceResponse =
-            test::call_service(&mut app, find_user_request).await;
-        let user = if find_user_service_response.status().is_success() {
-            let user: User = test::read_body_json(find_user_service_response).await;
-            user
-        } else {
-            let new_user = InsertUser {
-                valid_username: "spike".to_string(),
-                valid_password: "vicious".to_string(),
-            };
-            let register_user_request = test::TestRequest::post()
-                .uri("/users/register")
-                .set_json(&new_user)
-                .to_request();
-            let register_user_service_response: ServiceResponse =
-                test::call_service(&mut app, register_user_request).await;
-            assert!(register_user_service_response.status().is_success());
-
-            let user: User = test::read_body_json(register_user_service_response).await;
-            user
+        let new_user = InsertUser {
+            valid_username: "spike".to_string(),
+            valid_password: "vicious".to_string(),
         };
+        let register_user_request = test::TestRequest::post()
+            .uri("/users/register")
+            .set_json(&new_user)
+            .to_request();
+        let register_user_service_response: ServiceResponse =
+            test::call_service(&mut app, register_user_request).await;
+        assert!(register_user_service_response.status().is_success());
+
+        let user: User = test::read_body_json(register_user_service_response).await;
 
         let login_user = LoginUser {
             username: user.username,
@@ -286,7 +268,7 @@ pub async fn test_task_delete_non_existant_task() {
         .insert_header(("Authorization".to_string(), bearer_token))
         .cookie(cookies)
         .to_request();
-    let response = test::call_service(&mut app, request).await;
-    panic!("response is \n\n{:#?}\n\n", response);
-    assert!(response.status().is_client_error());
+    let response: ServiceResponse = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
 }
