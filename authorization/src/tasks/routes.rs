@@ -194,21 +194,32 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 /// visilibity!
 #[cfg(test)]
 mod tests {
-    use std::env;
-
-    use actix_web::{test, web, App};
+    use actix_identity::{CookieIdentityPolicy, IdentityService};
+    use actix_web::{
+        cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web, web::ServiceConfig, App,
+    };
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+    use time::Duration;
 
-    use super::*;
-    use crate::create_database;
+    use crate::{
+        create_database,
+        tasks::{
+            models::{InsertTask, Task, UpdateTask},
+            routes::{delete as task_delete, insert as task_insert, update as task_update},
+        },
+        users::{
+            models::{InsertUser, LoggedUser, LoginUser, User},
+            routes::{find_by_id as user_find_by_id, insert as user_insert, login},
+        },
+    };
 
-    async fn setup_data() -> web::Data<Pool<Sqlite>> {
+    pub async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
             .filename(env!("DATABASE_FILE"))
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(20)
+            .max_connections(1)
             .connect_with(db_options)
             .await
             .unwrap();
@@ -218,38 +229,168 @@ mod tests {
         web::Data::new(database_pool)
     }
 
-    #[actix_rt::test]
-    async fn test_insert_valid() {
-        let data = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(data.clone()).service(insert)).await;
+    // WARNING(alex): This macro doesn't check if there is an user register already, or if some user
+    // is logged in, so the tests must be run with:
+    // cargo test -- --test-threads=1
+    // Running them in parallel may fail!
+    #[macro_export]
+    macro_rules! setup_app {
+        ($configure: expr) => {{
+            let data = setup_data().await;
+            let app = App::new()
+                .app_data(data.clone())
+                .configure($configure)
+                .service(user_insert)
+                .service(login)
+                .wrap(IdentityService::new(
+                    CookieIdentityPolicy::new(&[0; 32])
+                        .name("auth-cookie")
+                        .login_deadline(Duration::minutes(10))
+                        .secure(false),
+                ));
+            let mut app = test::init_service(app).await;
 
-        let valid_insert = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+            let (cookies, bearer_token) = {
+                let new_user = InsertUser {
+                    valid_username: "spike".to_string(),
+                    valid_password: "vicious".to_string(),
+                };
+                let register_user_request = test::TestRequest::post()
+                    .uri("/users/register")
+                    .set_json(&new_user)
+                    .to_request();
+                let register_user_service_response: ServiceResponse =
+                    test::call_service(&mut app, register_user_request).await;
+                assert!(register_user_service_response.status().is_success());
+
+                let user: User = test::read_body_json(register_user_service_response).await;
+
+                let login_user = LoginUser {
+                    username: user.username,
+                    password: user.password,
+                };
+                let login_request = test::TestRequest::post()
+                    .uri("/users/login")
+                    .set_json(&login_user)
+                    .to_request();
+                let login_service_response: ServiceResponse =
+                    test::call_service(&mut app, login_request).await;
+                assert!(login_service_response.status().is_success());
+
+                let cookies = login_service_response.response().cookies();
+                let cookies_str = cookies
+                    .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+                    .collect::<String>();
+
+                let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
+
+                let bearer_token = format!("Bearer {}", logged_user.token);
+                let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+                (cookies, bearer_token)
+            };
+
+            (app, bearer_token, cookies)
+        }};
+    }
+
+    // NOTE(alex): I'm leaving this function without the `setup_app` macro to make messing with it
+    // easier.
+    #[actix_rt::test]
+    pub async fn test_task_insert_valid_task() {
+        let data = setup_data().await;
+        let app = App::new()
+            .app_data(data.clone())
+            .service(user_insert)
+            .service(user_find_by_id)
+            .configure(|cfg| {
+                cfg.service(task_insert);
+            })
+            .service(login)
+            .wrap(IdentityService::new(
+                CookieIdentityPolicy::new(&[0; 32])
+                    .name("auth-cookie")
+                    .login_deadline(Duration::minutes(10))
+                    .secure(false),
+            ));
+        let mut app = test::init_service(app).await;
+
+        let (cookies, bearer_token) = {
+            let new_user = InsertUser {
+                valid_username: "spike".to_string(),
+                valid_password: "vicious".to_string(),
+            };
+            let register_user_request = test::TestRequest::post()
+                .uri("/users/register")
+                .set_json(&new_user)
+                .to_request();
+            let register_user_service_response: ServiceResponse =
+                test::call_service(&mut app, register_user_request).await;
+            assert!(register_user_service_response.status().is_success());
+
+            let user: User = test::read_body_json(register_user_service_response).await;
+
+            let login_user = LoginUser {
+                username: user.username,
+                password: user.password,
+            };
+            let login_request = test::TestRequest::post()
+                .uri("/users/login")
+                .set_json(&login_user)
+                .to_request();
+            let login_service_response: ServiceResponse =
+                test::call_service(&mut app, login_request).await;
+            assert!(login_service_response.status().is_success());
+
+            let cookies = login_service_response.response().cookies();
+            let cookies_str = cookies
+                .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+                .collect::<String>();
+
+            let logged_user: LoggedUser = test::read_body_json(login_service_response).await;
+
+            let bearer_token = format!("Bearer {}", logged_user.token);
+            let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+            (cookies, bearer_token)
+        };
+
+        let valid_insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
         };
 
         let request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&valid_insert)
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .set_json(&valid_insert_task)
             .to_request();
+        // NOTE(alex): `response` will be of `uknown` type in rust-analyzer. Its concrete type is:
+        // ServiceResponse
         let response = test::call_service(&mut app, request).await;
 
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_insert_invalid_title() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
+    pub async fn test_task_insert_invalid_task_title() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+        };
 
-        let invalid_insert = InsertTask {
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+        let invalid_insert_task = InsertTask {
             non_empty_title: " \n\t".to_string(),
-            details: "details".to_string(),
+            details: "Good show.".to_string(),
         };
 
         let request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&invalid_insert)
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .set_json(&invalid_insert_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
 
@@ -257,140 +398,141 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_update_valid() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+    pub async fn test_task_update_valid_task() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_update);
         };
 
-        // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
+        };
+
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let valid_update = UpdateTask {
+        let task: Task = test::read_body_json(insert_task_response).await;
+        let update_task = UpdateTask {
             id: task.id,
-            new_title: format!("{} Updated", task.title),
-            details: format!("{} Updated", task.details),
+            new_title: format!("{}, and Yu Yu Hakusho", task.title),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/tasks")
-            .set_json(&valid_update)
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_update_invalid_title() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let task = InsertTask {
-            non_empty_title: "Title".to_string(),
-            details: "details".to_string(),
+    pub async fn test_task_update_with_invalid_task_title() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_update);
         };
 
-        // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
+        };
+
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let invalid_update = UpdateTask {
+        let task: Task = test::read_body_json(insert_task_response).await;
+        let update_task = UpdateTask {
             id: task.id,
             new_title: " \n\t".to_string(),
-            details: format!("{} Updated", task.details),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/tasks")
-            .set_json(&invalid_update)
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_client_error());
     }
 
     #[actix_rt::test]
-    async fn test_delete() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(delete),
-        )
-        .await;
-
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+    pub async fn test_task_delete_existing_task() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_delete);
         };
 
-        // NOTE(alex): Insert
-        let request = test::TestRequest::post()
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
+        };
+
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
+
+        let task: Task = test::read_body_json(insert_task_response).await;
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
-            .uri("/tasks/1")
-            // TODO(alex) [low] 2021-06-06: Why doesn't this work?
-            // .uri("/tasks")
-            // .param("id", "1")
+            .uri(&format!("/tasks/{}", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
             .to_request();
-
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_delete_nothing() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(delete)).await;
+    pub async fn test_task_delete_non_existent_task() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_delete);
+        };
 
-        let request = test::TestRequest::delete().uri("/tasks/1000").to_request();
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+        // NOTE(alex): Delete
+        let request = test::TestRequest::delete()
+            .uri(&format!("/tasks/{}", 1000))
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .to_request();
         let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_redirection());
+
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
     }
 }
