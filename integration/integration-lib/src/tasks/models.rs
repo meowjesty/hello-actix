@@ -112,9 +112,9 @@ impl Task {
         let result = sqlx::query(UNDO)
             .bind(task_id)
             .execute(&mut connection)
-            .await?;
+            .await;
 
-        Ok(result.rows_affected())
+        Ok(result?.rows_affected())
     }
 
     pub async fn find_all(db_pool: &SqlitePool) -> Result<Vec<Self>, AppError> {

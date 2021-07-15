@@ -7,3 +7,4 @@ TODO(alex) [mid] 2021-07-15: Write about the changes:
     - Talk a bit about the macro;
     - Mention single-threaded only rule for tests;
     - `test::read_*` functions as a way to extract data;
+    - If you get 404, check that every required service was added to the test;

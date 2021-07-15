@@ -261,3 +261,118 @@ pub async fn test_task_mark_as_done() {
 
     assert!(response.status().is_success());
 }
+
+#[actix_rt::test]
+pub async fn test_task_undo() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_done);
+        cfg.service(task_undo);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Done
+    let task_done_request = test::TestRequest::post()
+        .uri(&format!("/tasks/{}/done", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token.clone()))
+        .cookie(cookies.clone())
+        .to_request();
+    let task_done_response = test::call_service(&mut app, task_done_request).await;
+    assert!(task_done_response.status().is_success());
+
+    // NOTE(alex): Undo
+    let request = test::TestRequest::delete()
+        .uri(&format!("/tasks/{}/undo", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token))
+        .cookie(cookies)
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert!(response.status().is_success());
+}
+
+#[actix_rt::test]
+pub async fn test_task_find_all() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_find_all);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let _ = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Find all
+    let request = test::TestRequest::get().uri("/tasks").to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
+
+#[actix_rt::test]
+pub async fn test_task_ongoing_tasks() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_done);
+        cfg.service(find_ongoing);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let _ = pre_insert_task!(bearer_token, cookies, app);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Done
+    let task_done_request = test::TestRequest::post()
+        .uri(&format!("/tasks/{}/done", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token.clone()))
+        .cookie(cookies.clone())
+        .to_request();
+    let task_done_response = test::call_service(&mut app, task_done_request).await;
+    assert!(task_done_response.status().is_success());
+
+    // NOTE(alex): Find ongoing tasks only
+    let request = test::TestRequest::get().uri("/tasks/ongoing").to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
+
+#[actix_rt::test]
+pub async fn test_task_find_by_pattern() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_find_by_pattern);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let _ = pre_insert_task!(bearer_token, cookies, app);
+
+    let title_pattern = "?title=Watch&details=.";
+    // NOTE(alex): Find tasks with title pattern
+    let request = test::TestRequest::get()
+        .uri(&format!("/tasks{}", title_pattern))
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
+
+#[actix_rt::test]
+pub async fn test_task_find_by_id() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_find_by_id);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Find with id
+    let request = test::TestRequest::get()
+        .uri(&format!("/tasks/{}", task.id))
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
