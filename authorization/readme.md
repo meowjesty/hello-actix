@@ -1,7 +1,7 @@
 # 6 Authorization
 
-TODO(alex) 2021-07-13: This project changed quite a bit with the use of Bearer authentication, it
-requires a decent rewrite.
+TODO(alex) [mid] 2021-07-13: This project changed quite a bit with the use of Bearer authentication,
+it requires a decent rewrite.
 
 ## 6.1 The tour that never ends
 

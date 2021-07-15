@@ -11,6 +11,8 @@ use integration_lib::users::{
 };
 use time::Duration;
 
+// TODO(alex) [high] 2021-07-15: Some routes do not have dedicated tests yet.
+
 #[actix_rt::test]
 pub async fn test_user_insert_valid_user() {
     let data = setup_data().await;

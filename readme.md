@@ -30,9 +30,6 @@ is the level of security you should expect here. Don't get me wrong, I'll show y
 authorization middleware to forbid and allow users from accessing certain routes, but we won't be
 going much further than that into security practices here.
 
-Some testing is included, but they're not covering the whole application, I wanted to avoid having
-big files, or having every route function being `pub` (this will probably change in the future).
-
 ### Projects in ascending order of features
 
 1. [minimal](minimal/): A minimal "Hello, world" of sorts for
@@ -55,6 +52,9 @@ big files, or having every route function being `pub` (this will probably change
 6. [authorization](authorization/): These are **MY** cookies! Allow and forbid access to routes
    with [`actix-web-httpauth`](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth);
 
+7. [integration](integration/): We go a bit deeper in testing an actix-web app, bring a lantern and
+   snacks;
+
 ## How do I run this?
 
 - You must have [Rust](https://www.rust-lang.org/) installed! These examples were compiled on
@@ -76,6 +76,9 @@ workspace folder.
   authentication;
 - [actix-web-httpauth](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth):
   Forbidden cookies (protected routes);
+- [actix-rt](https://github.com/actix/actix-net/tree/master/actix-rt): Used as a runtime by our
+  tests (this is a
+  [`dev-dependency`](https://doc.rust-lang.org/rust-by-example/testing/dev_dependencies.html) only);
 - [serde](https://github.com/serde-rs/serde): Serialize and deserialize our `Task`s;
 - [serde_json](https://github.com/serde-rs/json): Does it with Json;
 - [thiserror](https://github.com/dtolnay/thiserror): Helps us to derive our custom `Error`s;
