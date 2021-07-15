@@ -22,9 +22,9 @@ async fn update(
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No tasks were updated."))
     } else {
-        Ok(HttpResponse::Created().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Updated {} tasks.", num_modified)))
     }
 }
 
@@ -36,9 +36,9 @@ async fn delete(
     let num_modified = Task::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body("No tasks were deleted."))
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Deleted {} tasks.", num_modified)))
     }
 }
 
@@ -50,7 +50,7 @@ async fn done(
     let created_id = Task::done(db_pool.get_ref(), *id).await?;
 
     if created_id == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body(format!("Task with id {} not done.", id)))
     } else {
         Ok(HttpResponse::Created().body(created_id.to_string()))
     }
@@ -64,9 +64,9 @@ async fn undo(
     let num_modified = Task::undo(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
-        Ok(HttpResponse::NotModified().finish())
+        Ok(HttpResponse::NotModified().body(format!("Task with id {} not undone.", id)))
     } else {
-        Ok(HttpResponse::Ok().body(num_modified.to_string()))
+        Ok(HttpResponse::Ok().body(format!("Undone {} tasks.", num_modified)))
     }
 }
 
@@ -122,7 +122,7 @@ async fn favorite(
 
         if old_favorite.id == *id {
             // NOTE(alex): Just remove the task, this is basically "unfavorite".
-            Ok(HttpResponse::NoContent().finish())
+            Ok(HttpResponse::NoContent().body(format!("Task {} unfavorited", old_favorite.id)))
         } else {
             match Task::find_by_id(&db_pool, *id).await? {
                 Some(task) => {
@@ -172,11 +172,11 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 ///
 /// Keep in mind that the library approach requires every testable function to have `pub`
 /// visilibity!
+
 #[cfg(test)]
 mod tests {
-    use std::env;
 
-    use actix_web::{test, web, App};
+    use actix_web::{http::StatusCode, test, web, App};
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
     use super::*;
@@ -188,7 +188,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(20)
+            .max_connections(15)
             .connect_with(db_options)
             .await
             .unwrap();
@@ -199,9 +199,9 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_insert_valid() {
+    pub async fn test_task_insert_valid_task() {
         let data = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(data.clone()).service(insert)).await;
+        let mut app = test::init_service(App::new().app_data(data).service(insert)).await;
 
         let valid_insert = InsertTask {
             non_empty_title: "Valid title".to_string(),
@@ -218,7 +218,7 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_insert_invalid_title() {
+    pub async fn test_task_insert_invalid_task_title() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
 
@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_update_valid() {
+    pub async fn test_task_update_valid_task() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(
             App::new()
@@ -247,43 +247,37 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
         };
 
         // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let valid_update = UpdateTask {
+        let task: Task = test::read_body_json(insert_task_response).await;
+        let update_task = UpdateTask {
             id: task.id,
-            new_title: format!("{} Updated", task.title),
-            details: format!("{} Updated", task.details),
+            new_title: format!("{}, and Yu Yu Hakusho", task.title),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/tasks")
-            .set_json(&valid_update)
+            .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_update_invalid_title() {
+    pub async fn test_task_update_with_invalid_task_title() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(
             App::new()
@@ -293,43 +287,36 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Title".to_string(),
-            details: "details".to_string(),
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
         };
 
-        // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let task: Task = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created task!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let invalid_update = UpdateTask {
+        let task: Task = test::read_body_json(insert_task_response).await;
+        let update_task = UpdateTask {
             id: task.id,
             new_title: " \n\t".to_string(),
-            details: format!("{} Updated", task.details),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/tasks")
-            .set_json(&invalid_update)
+            .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_client_error());
     }
 
     #[actix_rt::test]
-    async fn test_delete() {
+    pub async fn test_task_delete_existing_task() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(
             App::new()
@@ -339,38 +326,39 @@ mod tests {
         )
         .await;
 
-        let task = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
         };
 
-        // NOTE(alex): Insert
-        let request = test::TestRequest::post()
+        let insert_task_request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&task)
+            .set_json(&insert_task)
             .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
+
+        let task: Task = test::read_body_json(insert_task_response).await;
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
-            .uri("/tasks/1")
-            // TODO(alex) [low] 2021-06-06: Why doesn't this work?
-            // .uri("/tasks")
-            // .param("id", "1")
+            .uri(&format!("/tasks/{}", task.id))
             .to_request();
-
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_delete_nothing() {
+    pub async fn test_task_delete_non_existent_task() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(App::new().app_data(database_pool).service(delete)).await;
 
-        let request = test::TestRequest::delete().uri("/tasks/1000").to_request();
+        // NOTE(alex): Delete
+        let request = test::TestRequest::delete()
+            .uri(&format!("/tasks/{}", 1000))
+            .to_request();
         let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_redirection());
+
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
     }
 }

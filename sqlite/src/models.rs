@@ -42,7 +42,7 @@ pub(crate) struct QueryTask {
 }
 
 impl InsertTask {
-    pub(crate) async fn insert(&self, db_pool: &SqlitePool) -> Result<i64, AppError> {
+    pub(crate) async fn insert(self, db_pool: &SqlitePool) -> Result<Task, AppError> {
         let mut connection = db_pool.acquire().await?;
         let result = sqlx::query(INSERT)
             .bind(&self.non_empty_title)
@@ -50,12 +50,18 @@ impl InsertTask {
             .execute(&mut connection)
             .await?;
 
-        Ok(result.last_insert_rowid())
+        let task = Task {
+            id: result.last_insert_rowid(),
+            title: self.non_empty_title,
+            details: self.details,
+        };
+
+        Ok(task)
     }
 }
 
 impl UpdateTask {
-    pub(crate) async fn update(&self, db_pool: &SqlitePool) -> Result<u64, AppError> {
+    pub(crate) async fn update(self, db_pool: &SqlitePool) -> Result<u64, AppError> {
         let mut connection = db_pool.acquire().await?;
         let result = sqlx::query(UPDATE)
             .bind(&self.new_title)

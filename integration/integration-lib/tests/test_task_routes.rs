@@ -98,16 +98,16 @@ pub async fn test_task_insert_valid_task() {
 
 #[actix_rt::test]
 pub async fn test_task_insert_invalid_task_title() {
-    let invalid_insert_task = InsertTask {
-        non_empty_title: " \n\t".to_string(),
-        details: "Good show.".to_string(),
-    };
-
     let configure = |cfg: &mut ServiceConfig| {
         cfg.service(task_insert);
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+    let invalid_insert_task = InsertTask {
+        non_empty_title: " \n\t".to_string(),
+        details: "Good show.".to_string(),
+    };
 
     let request = test::TestRequest::post()
         .uri("/tasks")
@@ -122,17 +122,17 @@ pub async fn test_task_insert_invalid_task_title() {
 
 #[actix_rt::test]
 pub async fn test_task_update_valid_task() {
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
     let configure = |cfg: &mut ServiceConfig| {
         cfg.service(task_insert);
         cfg.service(task_update);
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+    let insert_task = InsertTask {
+        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+        details: "Good show.".to_string(),
+    };
 
     let insert_task_request = test::TestRequest::post()
         .uri("/tasks")
@@ -158,22 +158,23 @@ pub async fn test_task_update_valid_task() {
         .set_json(&update_task)
         .to_request();
     let response = test::call_service(&mut app, request).await;
+
     assert!(response.status().is_success());
 }
 
 #[actix_rt::test]
 pub async fn test_task_update_with_invalid_task_title() {
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
     let configure = |cfg: &mut ServiceConfig| {
         cfg.service(task_insert);
         cfg.service(task_update);
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+    let insert_task = InsertTask {
+        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+        details: "Good show.".to_string(),
+    };
 
     let insert_task_request = test::TestRequest::post()
         .uri("/tasks")
@@ -199,22 +200,23 @@ pub async fn test_task_update_with_invalid_task_title() {
         .set_json(&update_task)
         .to_request();
     let response = test::call_service(&mut app, request).await;
+
     assert!(response.status().is_client_error());
 }
 
 #[actix_rt::test]
 pub async fn test_task_delete_existing_task() {
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
     let configure = |cfg: &mut ServiceConfig| {
         cfg.service(task_insert);
         cfg.service(task_delete);
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+
+    let insert_task = InsertTask {
+        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+        details: "Good show.".to_string(),
+    };
 
     let insert_task_request = test::TestRequest::post()
         .uri("/tasks")
@@ -234,41 +236,25 @@ pub async fn test_task_delete_existing_task() {
         .cookie(cookies)
         .to_request();
     let response = test::call_service(&mut app, request).await;
+
     assert!(response.status().is_success());
 }
 
 #[actix_rt::test]
-pub async fn test_task_delete_non_existant_task() {
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
+pub async fn test_task_delete_non_existent_task() {
     let configure = |cfg: &mut ServiceConfig| {
-        cfg.service(task_insert);
         cfg.service(task_delete);
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
 
-    let insert_task_request = test::TestRequest::post()
-        .uri("/tasks")
-        .insert_header(("Authorization".to_string(), bearer_token.clone()))
-        .cookie(cookies.clone())
-        .set_json(&insert_task)
-        .to_request();
-    let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-    assert!(insert_task_response.status().is_success());
-
-    let task: Task = test::read_body_json(insert_task_response).await;
-
     // NOTE(alex): Delete
     let request = test::TestRequest::delete()
-        .uri(&format!("/tasks/{}", task.id + 1000))
+        .uri(&format!("/tasks/{}", 1000))
         .insert_header(("Authorization".to_string(), bearer_token))
         .cookie(cookies)
         .to_request();
-    let response: ServiceResponse = test::call_service(&mut app, request).await;
+    let response = test::call_service(&mut app, request).await;
 
     assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
 }
