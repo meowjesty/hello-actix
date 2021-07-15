@@ -208,12 +208,11 @@ mod tests {
         let insert_task_response = test::call_service(&mut app, insert_task_request).await;
         assert!(insert_task_response.status().is_success());
 
-        let body = test::read_body(insert_task_response).await;
-        let task_id: i64 = std::str::from_utf8(&body[..]).unwrap().parse().unwrap();
+        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
-            id: task_id,
-            new_title: "Re-watch Yu Yu Hakusho".to_string(),
-            details: "Classic.".to_string(),
+            id: task.id,
+            new_title: format!("{}, and Yu Yu Hakusho", task.title),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
@@ -248,12 +247,11 @@ mod tests {
         let insert_task_response = test::call_service(&mut app, insert_task_request).await;
         assert!(insert_task_response.status().is_success());
 
-        let body = test::read_body(insert_task_response).await;
-        let task_id: i64 = std::str::from_utf8(&body[..]).unwrap().parse().unwrap();
+        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
-            id: task_id,
+            id: task.id,
             new_title: " \n\t".to_string(),
-            details: "Classic.".to_string(),
+            details: format!("{} Classic.", task.details),
         };
 
         // NOTE(alex): Update
@@ -288,12 +286,11 @@ mod tests {
         let insert_task_response = test::call_service(&mut app, insert_task_request).await;
         assert!(insert_task_response.status().is_success());
 
-        let body = test::read_body(insert_task_response).await;
-        let task_id: i64 = std::str::from_utf8(&body[..]).unwrap().parse().unwrap();
+        let task: Task = test::read_body_json(insert_task_response).await;
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
-            .uri(&format!("/tasks/{}", task_id))
+            .uri(&format!("/tasks/{}", task.id))
             .to_request();
         let response = test::call_service(&mut app, request).await;
         assert!(response.status().is_success());
