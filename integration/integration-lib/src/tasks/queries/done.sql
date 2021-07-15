@@ -1,2 +1,2 @@
-insert into Done (todo_id)
+insert into Done (task_id)
 values ($1)

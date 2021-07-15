@@ -10,5 +10,5 @@ const INSERT: &'static str = include_str!("./tasks/queries/insert.sql");
 const UPDATE: &'static str = include_str!("./tasks/queries/update.sql");
 const DELETE: &'static str = include_str!("./tasks/queries/delete.sql");
 
-const COMPLETED: &'static str = include_str!("./tasks/queries/done.sql");
+const DONE: &'static str = include_str!("./tasks/queries/done.sql");
 const UNDO: &'static str = include_str!("./tasks/queries/undo.sql");

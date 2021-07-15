@@ -123,6 +123,8 @@ pub(crate) fn user_service(cfg: &mut web::ServiceConfig) {
     cfg.service(logout);
 }
 
+// WARNING(alex): Please ignore these tests for now, we'll take a better look at them on the
+// `integration` project!
 #[cfg(test)]
 mod tests {
     use actix_identity::{CookieIdentityPolicy, IdentityService};

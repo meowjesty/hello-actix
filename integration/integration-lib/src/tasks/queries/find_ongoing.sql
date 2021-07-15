@@ -1,2 +1,2 @@
 select *
-from OngoingTodo;
+from OngoingTask;

@@ -186,12 +186,8 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
     cfg.service(find_favorite);
 }
 
-/// NOTE(alex): Binary crates cannot use the integration test convention of having a separate
-/// `tests` folder living alongside `src`. To have proper testing (smaller file size) you could
-/// create a library crate, and move the implementation and tests there.
-///
-/// Keep in mind that the library approach requires every testable function to have `pub`
-/// visilibity!
+// WARNING(alex): Please ignore these tests for now, we'll take a better look at them on the
+// `integration` project!
 #[cfg(test)]
 mod tests {
     use actix_identity::{CookieIdentityPolicy, IdentityService};

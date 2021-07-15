@@ -1,2 +1,2 @@
 delete from Done
-where todo_id = $1
+where task_id = $1

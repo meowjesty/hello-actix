@@ -8,7 +8,11 @@ use common::setup_data;
 use integration_lib::{
     tasks::{
         models::{InsertTask, Task, UpdateTask},
-        routes::{delete as task_delete, insert as task_insert, update as task_update},
+        routes::{
+            delete as task_delete, done as task_done, find_all as task_find_all,
+            find_by_id as task_find_by_id, find_by_pattern as task_find_by_pattern, find_favorite,
+            find_ongoing, insert as task_insert, undo as task_undo, update as task_update,
+        },
     },
     users::{
         models::{InsertUser, LoggedUser, LoginUser, User},
@@ -16,6 +20,27 @@ use integration_lib::{
     },
 };
 use time::Duration;
+
+macro_rules! pre_insert_task {
+    ($bearer_token: expr, $cookies: expr, $app: expr) => {{
+        let insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
+        };
+
+        let insert_task_request = test::TestRequest::post()
+            .uri("/tasks")
+            .insert_header(("Authorization".to_string(), $bearer_token.clone()))
+            .cookie($cookies.clone())
+            .set_json(&insert_task)
+            .to_request();
+        let insert_task_response = test::call_service(&mut $app, insert_task_request).await;
+        assert!(insert_task_response.status().is_success());
+
+        let task: Task = test::read_body_json(insert_task_response).await;
+        task
+    }};
+}
 
 // NOTE(alex): I'm leaving this function without the `setup_app` macro to make messing with it
 // easier.
@@ -128,22 +153,8 @@ pub async fn test_task_update_valid_task() {
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
 
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
-    let insert_task_request = test::TestRequest::post()
-        .uri("/tasks")
-        .insert_header(("Authorization".to_string(), bearer_token.clone()))
-        .cookie(cookies.clone())
-        .set_json(&insert_task)
-        .to_request();
-    let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-    assert!(insert_task_response.status().is_success());
-
-    let task: Task = test::read_body_json(insert_task_response).await;
     let update_task = UpdateTask {
         id: task.id,
         new_title: format!("{}, and Yu Yu Hakusho", task.title),
@@ -170,22 +181,8 @@ pub async fn test_task_update_with_invalid_task_title() {
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
 
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
-    let insert_task_request = test::TestRequest::post()
-        .uri("/tasks")
-        .insert_header(("Authorization".to_string(), bearer_token.clone()))
-        .cookie(cookies.clone())
-        .set_json(&insert_task)
-        .to_request();
-    let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-    assert!(insert_task_response.status().is_success());
-
-    let task: Task = test::read_body_json(insert_task_response).await;
     let update_task = UpdateTask {
         id: task.id,
         new_title: " \n\t".to_string(),
@@ -212,22 +209,7 @@ pub async fn test_task_delete_existing_task() {
     };
 
     let (mut app, bearer_token, cookies) = setup_app!(configure);
-
-    let insert_task = InsertTask {
-        non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-        details: "Good show.".to_string(),
-    };
-
-    let insert_task_request = test::TestRequest::post()
-        .uri("/tasks")
-        .insert_header(("Authorization".to_string(), bearer_token.clone()))
-        .cookie(cookies.clone())
-        .set_json(&insert_task)
-        .to_request();
-    let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-    assert!(insert_task_response.status().is_success());
-
-    let task: Task = test::read_body_json(insert_task_response).await;
+    let task = pre_insert_task!(bearer_token, cookies, app);
 
     // NOTE(alex): Delete
     let request = test::TestRequest::delete()
@@ -257,4 +239,25 @@ pub async fn test_task_delete_non_existent_task() {
     let response = test::call_service(&mut app, request).await;
 
     assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+}
+
+#[actix_rt::test]
+pub async fn test_task_mark_as_done() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_done);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Done
+    let request = test::TestRequest::post()
+        .uri(&format!("/tasks/{}/done", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token))
+        .cookie(cookies)
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert!(response.status().is_success());
 }

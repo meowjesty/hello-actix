@@ -99,7 +99,7 @@ impl Task {
 
     pub async fn done(pool: &SqlitePool, task_id: i64) -> Result<i64, AppError> {
         let mut connection = pool.acquire().await?;
-        let result = sqlx::query(COMPLETED)
+        let result = sqlx::query(DONE)
             .bind(task_id)
             .execute(&mut connection)
             .await?;

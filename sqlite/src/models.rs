@@ -12,7 +12,7 @@ const INSERT: &'static str = include_str!("./../queries/insert.sql");
 const UPDATE: &'static str = include_str!("./../queries/update.sql");
 const DELETE: &'static str = include_str!("./../queries/delete.sql");
 
-const COMPLETED: &'static str = include_str!("./../queries/done.sql");
+const DONE: &'static str = include_str!("./../queries/done.sql");
 const UNDO: &'static str = include_str!("./../queries/undo.sql");
 
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
@@ -87,7 +87,7 @@ impl Task {
 
     pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<i64, AppError> {
         let mut connection = pool.acquire().await?;
-        let result = sqlx::query(COMPLETED)
+        let result = sqlx::query(DONE)
             .bind(task_id)
             .execute(&mut connection)
             .await?;

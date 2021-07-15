@@ -16,7 +16,7 @@ const INSERT: &'static str = include_str!("./../queries/insert.sql");
 const UPDATE: &'static str = include_str!("./../queries/update.sql");
 const DELETE: &'static str = include_str!("./../queries/delete.sql");
 
-const COMPLETED: &'static str = include_str!("./../queries/done.sql");
+const DONE: &'static str = include_str!("./../queries/done.sql");
 const UNDO: &'static str = include_str!("./../queries/undo.sql");
 
 // TODO(alex) [low] 2021-06-28: Most of these `pub(crate)` are here because of tests that are in
@@ -109,7 +109,7 @@ impl Task {
 
     pub(crate) async fn done(pool: &SqlitePool, task_id: i64) -> Result<u64, AppError> {
         let mut connection = pool.acquire().await?;
-        let result = sqlx::query(COMPLETED)
+        let result = sqlx::query(DONE)
             .bind(task_id)
             .execute(&mut connection)
             .await?;
