@@ -378,7 +378,6 @@ pub async fn test_task_find_by_id() {
     assert_eq!(response.status(), StatusCode::FOUND);
 }
 
-// TODO(alex) [high] 2021-07-15: Finish adding missing routes for task, then do the same for users.
 #[actix_rt::test]
 pub async fn test_task_favorite() {
     let configure = |cfg: &mut ServiceConfig| {
