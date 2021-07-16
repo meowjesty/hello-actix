@@ -9,8 +9,6 @@ use sqlx::{FromRow, SqlitePool};
 use super::{errors::*, *};
 use crate::errors::AppError;
 
-// TODO(alex) [low] 2021-06-28: Most of these `pub` are here because of tests that are in
-// other modules, how do I solve this?
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: i64,

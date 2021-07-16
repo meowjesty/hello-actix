@@ -15,54 +15,95 @@ The [actix-web-httpauth](https://github.com/actix/actix-extras/tree/master/actix
 provides us with the
 [`HttpAuthentication`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/middleware/struct.HttpAuthentication.html#)
 middleware. We'll be using its
-[`HttpAuthentication::basic`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.basic)
+[`HttpAuthentication::bearer`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.bearer)
 version.
 
-Now our requests must include an HTTP
-[`Authorization`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization) header.
-This is required by every single service we're providing, because we're wrapping the whole `App`
-with the `HttpAuthentication` middleware. There is a way to wrap only specific services if you want
-that, just use the
-[`wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/attr.post.html) attribute on the service:
+The [_Bearer_](https://datatracker.ietf.org/doc/html/rfc6750) authorization uses an access token to
+grant access. This token is part of our request header, so requests to services that use the
+`HttpAuthentication` middleware must have `Authorization: Bearer [token]` in their header.
+
+So far we've been wrapping the whole `App` with every middleware, and we could do the same for
+`HttpAuthentication`, but I want some routes to be unprotected (`users/login`, `users/register`,
+and `GET` services in general), so we'll be wrapping individual services in the middleware instead.
+
+### 6.2.1 Wrapping
+
+There are a few ways of using `wrap`:
+
+- [`App::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.wrap) as
+  we've been doing, it registers the middleware for the whole `App`;
+- [`Resource::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Resource.html#method.wrap)
+  this wraps a specific
+  [`Resource`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Resource.html) only (we'll
+  be using this version to protect some services, but in its macro form);
+- [`Scope::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Scope.html#method.wrap)
+  which protects by [`Scope`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Scope.html)
+  (a way of grouping services under a singular scope);
+
+The `App::wrap` version we've been using would require us to send requests with an authorization
+header for every service, as `HttpAuthentication` will forbid access without it, and there is no way
+to open exceptions. Every request without this header would return a forbidden response, and we have
+no control over it.
+
+The other 2 are more malleable ways of setting middleware, as they don't wrap the whole application.
+We're not using `Scope` in any of these projects, for no particular reason, other than we have few
+routes, so going the individual service routes ends up being more explicit and not cumbersome enough
+to justify using those.
+
+### 6.2.2 Macro wrap
+
+Service macros (`get`, `put`, `post`, ...) have a `wrap` attribute that does the wrapping for a
+`Resource`:
 
 ```rust
-// Protect only index
-#[get("/", wrap = "HttpAuthentication::basic(validator)")]
-async fn index() -> Result<impl Responder, AppError>
+// This form could've been used to individually set up any middleware for specific services,
+// it's not just an authentication thing.
+#[post("/tasks", wrap = "HttpAuthentication::bearer(validator)")]
+async fn insert(...) -> Result<impl Responder, AppError>
 ```
 
-This can be done for any middleware, not only `HttpAuthentication`.
+We set up `HttpAuthentication` with the `bearer` function, and pass into it a function that does
+the validation (keep in mind that this function won't even be called if there is no authorization
+header). This is the function that will handle our authorization process.
+
+```rust
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error>
+```
+
+`HttpAuthentication` middleware provides 2 forms of authentication, `BasicAuth` and `BearerAuth`, so
+this function signature must match the kind you want.
+The [`BearerAuth`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html)
+extractor gives us with a way to check the
+[`token`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html#method.token)
+provided by the request header, without us having to manually dig into the `req` parameter.
+
+This middleware function will be called pre-services, so it must return a
+[`ServiceRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/struct.ServiceRequest.html)
+that will be passed onwards. Note that this is not a `HttpRequest`, but a `ServiceRequest`, the
+difference being that `ServiceRequest` gives **mutable** access to the request contents, so we may
+alter the request before it's passed down to our services.
+
+Our [`validator`](src/main.rs) function uses the `IdentityService` cookie embedded in the `req`uest
+to check if our user is currently logged in by matching the `credentials.token()` with the
+`logged_user.token`. If they match we just pass the `req`uest forward, otherwise we return some
+error.
 
 ## 6.3 Our use of `HtppAuthentication`
 
-`HttpAuthentication::basic` expects us to give it a function that will be used to do the validation.
+We'll be protecting services that change the database (`POST`, `PUT`, `DELETE`), and allowing access
+to any `GET` request without login. There are only 2 `POST` services allowed, `/users/register` and
+`/users/login`, as we don't start the database with any user pre-registered, and logging-in has to
+be accessible.
 
-```rust
-async fn validator(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, Error>
-```
-
-Pay close attention that we're dealing with
-[`ServiceRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/struct.ServiceRequest.html)
-here, and not our familiar `HttpRequest`. The difference between the two is that `ServiceRequest`
-gives **mutable** access to the request contents, so we may alter the request before it's passed
-down to our services.
-
-[`BasicAuth`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/extractors/basic/struct.BasicAuth.html)
-is the extractor for this middleware, and may be used to look up the `Authorization` part of the
-request header. We're not using it though.
-
-The `validator` function will only allow requests that:
-
-- are `GET` requests, we don't protect information search at all;
-- have either `"login"`, or `"register"` in their path, so that we may insert a new user, and login;
-- have a `"auth-cookie"` cookie, this is generated after the user logs in;
+Protected services will require requests to contain a `Authorization: Bearer token`, and for the
+user to be previously logged in, which generates a `LoggedUser` with a token, stored in the
+`auth-cookie`.
 
 Trying to reach any other service without these conditions will give you a nice
-`ErrorUnauthorized(UserError::NotLoggedIn)`. So you cannot insert, or delete a `Task` without being
-logged in first.
+`ErrorUnauthorized(..)` of some sort. So you cannot insert, or delete a `Task` without being logged
+in first.
 
-## 6.4 And ... cut
+## 6.4 Next up
 
-That's it so far.
-
-Thank you for reading, hoping it helped you in some way!
+The [integration](../integration/) project contains another re-structuring to allow tests and
+services to live in different files.

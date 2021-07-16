@@ -15,8 +15,6 @@ use integration_lib::users::{
 };
 use time::Duration;
 
-// TODO(alex) [high] 2021-07-15: Backport the tests.
-
 macro_rules! pre_insert_user {
     ($app: expr) => {{
         let insert_user = InsertUser {
