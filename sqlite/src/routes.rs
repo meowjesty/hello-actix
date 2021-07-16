@@ -123,7 +123,6 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-
     use actix_web::{
         http::StatusCode,
         test,

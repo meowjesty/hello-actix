@@ -174,12 +174,57 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-
-    use actix_web::{http::StatusCode, test, web, App};
+    use actix_session::CookieSession;
+    use actix_web::{
+        cookie::Cookie,
+        dev::ServiceResponse,
+        http::StatusCode,
+        test,
+        web::{self, ServiceConfig},
+        App,
+    };
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
     use super::*;
     use crate::create_database;
+
+    #[macro_export]
+    macro_rules! setup_app {
+        ($configure: expr) => {{
+            let data = setup_data().await;
+            let app = App::new()
+                .app_data(data.clone())
+                .configure($configure)
+                .wrap(
+                    CookieSession::signed(&[0; 32])
+                        .name("session-cookie")
+                        .secure(false),
+                );
+
+            let app = test::init_service(app).await;
+
+            app
+        }};
+    }
+
+    macro_rules! pre_insert_task {
+        ($app: expr) => {{
+            let insert_task = InsertTask {
+                non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+                details: "Good show.".to_string(),
+            };
+
+            let insert_task_request = test::TestRequest::post()
+                .uri("/tasks")
+                .set_json(&insert_task)
+                .to_request();
+            let insert_task_response = test::call_service(&mut $app, insert_task_request).await;
+            assert!(insert_task_response.status().is_success());
+
+            let task: Task = test::read_body_json(insert_task_response).await;
+            task
+        }};
+    }
 
     async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -202,14 +247,14 @@ mod tests {
         let data = setup_data().await;
         let mut app = test::init_service(App::new().app_data(data).service(insert)).await;
 
-        let valid_insert = InsertTask {
-            non_empty_title: "Valid title".to_string(),
-            details: "details".to_string(),
+        let valid_insert_task = InsertTask {
+            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+            details: "Good show.".to_string(),
         };
 
         let request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&valid_insert)
+            .set_json(&valid_insert_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
 
@@ -218,17 +263,20 @@ mod tests {
 
     #[actix_rt::test]
     pub async fn test_task_insert_invalid_task_title() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+        };
 
-        let invalid_insert = InsertTask {
+        let mut app = setup_app!(configure);
+
+        let invalid_insert_task = InsertTask {
             non_empty_title: " \n\t".to_string(),
-            details: "details".to_string(),
+            details: "Good show.".to_string(),
         };
 
         let request = test::TestRequest::post()
             .uri("/tasks")
-            .set_json(&invalid_insert)
+            .set_json(&invalid_insert_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
 
@@ -237,29 +285,14 @@ mod tests {
 
     #[actix_rt::test]
     pub async fn test_task_update_valid_task() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(update);
         };
 
-        // NOTE(alex): Insert before updating.
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
 
-        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
             id: task.id,
             new_title: format!("{}, and Yu Yu Hakusho", task.title),
@@ -272,33 +305,20 @@ mod tests {
             .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
     pub async fn test_task_update_with_invalid_task_title() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(update);
         };
 
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
 
-        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
             id: task.id,
             new_title: " \n\t".to_string(),
@@ -311,39 +331,26 @@ mod tests {
             .set_json(&update_task)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_client_error());
     }
 
     #[actix_rt::test]
     pub async fn test_task_delete_existing_task() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(delete),
-        )
-        .await;
-
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(delete);
         };
 
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
-
-        let task: Task = test::read_body_json(insert_task_response).await;
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
             .uri(&format!("/tasks/{}", task.id))
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
@@ -359,5 +366,188 @@ mod tests {
         let response = test::call_service(&mut app, request).await;
 
         assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_mark_as_done() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(done);
+        };
+
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Done
+        let request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_undo() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(done);
+            cfg.service(undo);
+        };
+
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Done
+        let task_done_request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .to_request();
+        let task_done_response = test::call_service(&mut app, task_done_request).await;
+        assert!(task_done_response.status().is_success());
+
+        // NOTE(alex): Undo
+        let request = test::TestRequest::delete()
+            .uri(&format!("/tasks/{}/undo", task.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_all() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(find_all);
+        };
+
+        let mut app = setup_app!(configure);
+        let _ = pre_insert_task!(app);
+
+        // NOTE(alex): Find all
+        let request = test::TestRequest::get().uri("/tasks").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_ongoing_tasks() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(done);
+            cfg.service(find_ongoing);
+        };
+
+        let mut app = setup_app!(configure);
+        let _ = pre_insert_task!(app);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Done
+        let task_done_request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .to_request();
+        let task_done_response = test::call_service(&mut app, task_done_request).await;
+        assert!(task_done_response.status().is_success());
+
+        // NOTE(alex): Find ongoing tasks only
+        let request = test::TestRequest::get().uri("/tasks/ongoing").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_by_pattern() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(find_by_pattern);
+        };
+
+        let mut app = setup_app!(configure);
+        let _ = pre_insert_task!(app);
+
+        let title_pattern = "?title=Watch&details=.";
+        // NOTE(alex): Find tasks with title pattern
+        let request = test::TestRequest::get()
+            .uri(&format!("/tasks{}", title_pattern))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_by_id() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(find_by_id);
+        };
+
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Find with id
+        let request = test::TestRequest::get()
+            .uri(&format!("/tasks/{}", task.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_favorite() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(favorite);
+        };
+
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Favorite
+        let request = test::TestRequest::post()
+            .uri(&format!("/tasks/favorite/{}", task.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_favorite() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(favorite);
+            cfg.service(find_favorite);
+        };
+
+        let mut app = setup_app!(configure);
+        let task = pre_insert_task!(app);
+
+        // NOTE(alex): Favorite
+        let task_favorite_request = test::TestRequest::post()
+            .uri(&format!("/tasks/favorite/{}", task.id))
+            .to_request();
+        let task_favorite_response: ServiceResponse =
+            test::call_service(&mut app, task_favorite_request).await;
+        assert_eq!(task_favorite_response.status(), StatusCode::FOUND);
+
+        // NOTE(alex): Retrieve the session cookies to insert them into the find favorite request.
+        let session_cookies = task_favorite_response.response().cookies();
+        let cookies_str = session_cookies
+            .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+            .collect::<String>();
+        let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+        // NOTE(alex): Find favorite
+        let request = test::TestRequest::get()
+            .uri("/tasks/favorite")
+            .cookie(cookies.clone())
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
     }
 }
