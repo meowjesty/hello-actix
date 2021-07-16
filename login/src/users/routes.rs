@@ -8,7 +8,7 @@ use super::{
 };
 use crate::errors::AppError;
 
-#[post("/users")]
+#[post("/users/register")]
 async fn insert(
     db_pool: web::Data<SqlitePool>,
     input: InsertUser,
@@ -76,7 +76,7 @@ async fn login(
     }
 }
 
-#[post("/users/logout")]
+#[delete("/users/logout")]
 async fn logout(identity: Identity) -> impl Responder {
     identity.forget();
     HttpResponse::Ok().body("Logged out.")
@@ -94,13 +94,58 @@ pub(crate) fn user_service(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
-    use actix_web::{test, web, App};
+    use actix_identity::{CookieIdentityPolicy, IdentityService};
+    use actix_web::{
+        cookie::Cookie,
+        dev::ServiceResponse,
+        http::StatusCode,
+        test,
+        web::{self, ServiceConfig},
+        App,
+    };
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+    use time::Duration;
 
     use super::*;
     use crate::create_database;
+
+    macro_rules! setup_app {
+        ($configure: expr) => {{
+            let data = setup_data().await;
+            let app = App::new()
+                .app_data(data.clone())
+                .configure($configure)
+                .wrap(IdentityService::new(
+                    CookieIdentityPolicy::new(&[0; 32])
+                        .name("auth-cookie")
+                        .login_deadline(Duration::minutes(5))
+                        .secure(false),
+                ));
+
+            let app = test::init_service(app).await;
+
+            app
+        }};
+    }
+
+    macro_rules! pre_insert_user {
+        ($app: expr) => {{
+            let insert_user = InsertUser {
+                valid_username: "yusuke".to_string(),
+                valid_password: "toguro".to_string(),
+            };
+
+            let insert_user_request = test::TestRequest::post()
+                .uri("/users/register")
+                .set_json(&insert_user)
+                .to_request();
+            let insert_user_response = test::call_service(&mut $app, insert_user_request).await;
+            assert!(insert_user_response.status().is_success());
+
+            let user: User = test::read_body_json(insert_user_response).await;
+            user
+        }};
+    }
 
     async fn setup_data() -> web::Data<Pool<Sqlite>> {
         let db_options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -108,7 +153,7 @@ mod tests {
             .create_if_missing(true);
 
         let database_pool = SqlitePoolOptions::new()
-            .max_connections(20)
+            .max_connections(1)
             .connect_with(db_options)
             .await
             .unwrap();
@@ -119,18 +164,18 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_insert_valid() {
+    pub async fn test_user_insert_valid_user() {
         let data = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(data.clone()).service(insert)).await;
+        let mut app = test::init_service(App::new().app_data(data).service(insert)).await;
 
-        let valid_insert = InsertUser {
-            valid_username: "valid_user".to_string(),
-            valid_password: "valid_password".to_string(),
+        let valid_insert_user = InsertUser {
+            valid_username: "yusuke".to_string(),
+            valid_password: "toguro".to_string(),
         };
 
         let request = test::TestRequest::post()
-            .uri("/users")
-            .set_json(&valid_insert)
+            .uri("/users/register")
+            .set_json(&valid_insert_user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
 
@@ -138,18 +183,21 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_insert_invalid_username() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(App::new().app_data(database_pool).service(insert)).await;
+    pub async fn test_user_insert_invalid_user_username() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+        };
 
-        let invalid_insert = InsertUser {
+        let mut app = setup_app!(configure);
+
+        let invalid_insert_user = InsertUser {
             valid_username: " \n\t".to_string(),
-            valid_password: "valid_password".to_string(),
+            valid_password: "toguro".to_string(),
         };
 
         let request = test::TestRequest::post()
-            .uri("/users")
-            .set_json(&invalid_insert)
+            .uri("/users/register")
+            .set_json(&invalid_insert_user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
 
@@ -157,141 +205,196 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_update_valid() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let user = InsertUser {
-            valid_username: "valid_username".to_string(),
-            valid_password: "valid_password".to_string(),
+    pub async fn test_user_update_valid_user() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(update);
         };
 
-        // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
-            .uri("/users")
-            .set_json(&user)
-            .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let mut app = setup_app!(configure);
+        let user = pre_insert_user!(app);
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let user: User = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created user!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let valid_update = UpdateUser {
+        let update_user = UpdateUser {
             id: user.id,
-            valid_username: format!("{}updated", user.username),
-            valid_password: format!("{}updated", user.password),
+            valid_username: format!("{}_urameshi", user.username),
+            valid_password: format!("{}_young.", user.password),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/users")
-            .set_json(&valid_update)
+            .set_json(&update_user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_update_invalid_username() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(update),
-        )
-        .await;
-
-        let user = InsertUser {
-            valid_username: "valid_username".to_string(),
-            valid_password: "valid_password".to_string(),
+    pub async fn test_user_update_with_invalid_user_username() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(update);
         };
 
-        // NOTE(alex): Insert before updating.
-        let request = test::TestRequest::post()
-            .uri("/users")
-            .set_json(&user)
-            .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let mut app = setup_app!(configure);
+        let user = pre_insert_user!(app);
 
-        // TODO(alex) [low] 2021-06-21: Why doesn't it implement `try_into` for string?
-        let user: User = match response.into_body() {
-            actix_web::body::AnyBody::Bytes(bytes) => {
-                serde_json::from_slice(&bytes).expect("Failed deserializing created user!")
-            }
-            _ => panic!("Unexpected body!"),
-        };
-        let invalid_update = UpdateUser {
+        let update_user = UpdateUser {
             id: user.id,
             valid_username: " \n\t".to_string(),
-            valid_password: format!("{}updated", user.password),
+            valid_password: format!("{}_young.", user.password),
         };
 
         // NOTE(alex): Update
         let request = test::TestRequest::put()
             .uri("/users")
-            .set_json(&invalid_update)
+            .set_json(&update_user)
             .to_request();
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_client_error());
     }
 
     #[actix_rt::test]
-    async fn test_delete() {
-        let database_pool = setup_data().await;
-        let mut app = test::init_service(
-            App::new()
-                .app_data(database_pool)
-                .service(insert)
-                .service(delete),
-        )
-        .await;
-
-        let user = InsertUser {
-            valid_username: "valid_username".to_string(),
-            valid_password: "valid_password".to_string(),
+    pub async fn test_user_delete_existing_user() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(delete);
         };
 
-        // NOTE(alex): Insert
-        let request = test::TestRequest::post()
-            .uri("/users")
-            .set_json(&user)
-            .to_request();
-        let response = test::call_service(&mut app, request).await;
-        assert!(response.status().is_success());
+        let mut app = setup_app!(configure);
+        let user = pre_insert_user!(app);
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
-            .uri("/users/1")
-            // TODO(alex) [low] 2021-06-06: Why doesn't this work?
-            // .uri("/users")
-            // .param("id", "1")
+            .uri(&format!("/users/{}", user.id))
             .to_request();
-
         let response = test::call_service(&mut app, request).await;
+
         assert!(response.status().is_success());
     }
 
     #[actix_rt::test]
-    async fn test_delete_nothing() {
+    pub async fn test_user_delete_non_existent_user() {
         let database_pool = setup_data().await;
         let mut app = test::init_service(App::new().app_data(database_pool).service(delete)).await;
 
-        let request = test::TestRequest::delete().uri("/users/1000").to_request();
+        // NOTE(alex): Delete
+        let request = test::TestRequest::delete()
+            .uri(&format!("/users/{}", 1000))
+            .to_request();
         let response = test::call_service(&mut app, request).await;
-        println!("{:#?}", response);
-        assert!(response.status().is_redirection());
+
+        assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_user_find_all() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(find_all);
+        };
+
+        let mut app = setup_app!(configure);
+        let _ = pre_insert_user!(app);
+
+        // NOTE(alex): Find all
+        let request = test::TestRequest::get().uri("/users").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_user_find_by_id() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(find_by_id);
+        };
+
+        let mut app = setup_app!(configure);
+        let user = pre_insert_user!(app);
+
+        // NOTE(alex): Find with id
+        let request = test::TestRequest::get()
+            .uri(&format!("/users/{}", user.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_user_login() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(login);
+        };
+
+        let mut app = setup_app!(configure);
+        let user = pre_insert_user!(app);
+
+        // NOTE(alex): Login
+        let request = test::TestRequest::post()
+            .uri("/users/login")
+            .set_json(&user)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_user_logout() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(insert);
+            cfg.service(login);
+            cfg.service(logout);
+        };
+
+        let mut app = setup_app!(configure);
+
+        let new_user = InsertUser {
+            valid_username: "spike".to_string(),
+            valid_password: "vicious".to_string(),
+        };
+        let register_user_request = test::TestRequest::post()
+            .uri("/users/register")
+            .set_json(&new_user)
+            .to_request();
+        let register_user_service_response: ServiceResponse =
+            test::call_service(&mut app, register_user_request).await;
+        assert!(register_user_service_response.status().is_success());
+
+        let user: User = test::read_body_json(register_user_service_response).await;
+
+        let login_user = LoginUser {
+            username: user.username,
+            password: user.password,
+        };
+        let login_request = test::TestRequest::post()
+            .uri("/users/login")
+            .set_json(&login_user)
+            .to_request();
+        let login_service_response: ServiceResponse =
+            test::call_service(&mut app, login_request).await;
+        assert!(login_service_response.status().is_success());
+
+        let cookies = login_service_response.response().cookies();
+        let cookies_str = cookies
+            .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+            .collect::<String>();
+
+        let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+        // NOTE(alex): Logout
+        let request = test::TestRequest::delete()
+            .uri("/users/logout")
+            .cookie(cookies)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
     }
 }

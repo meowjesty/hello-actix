@@ -189,7 +189,6 @@ mod tests {
     use super::*;
     use crate::create_database;
 
-    #[macro_export]
     macro_rules! setup_app {
         ($configure: expr) => {{
             let data = setup_data().await;
