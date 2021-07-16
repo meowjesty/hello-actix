@@ -19,8 +19,6 @@ const DELETE: &'static str = include_str!("./../queries/delete.sql");
 const DONE: &'static str = include_str!("./../queries/done.sql");
 const UNDO: &'static str = include_str!("./../queries/undo.sql");
 
-// TODO(alex) [low] 2021-06-28: Most of these `pub(crate)` are here because of tests that are in
-// other modules, hos do I solve this?
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub(crate) struct Task {
     pub(crate) id: i64,

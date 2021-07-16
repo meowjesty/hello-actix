@@ -1,6 +1,7 @@
 mod common;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService};
+use actix_session::CookieSession;
 use actix_web::{
     cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
 };
@@ -9,7 +10,7 @@ use integration_lib::{
     tasks::{
         models::{InsertTask, Task, UpdateTask},
         routes::{
-            delete as task_delete, done as task_done, find_all as task_find_all,
+            delete as task_delete, done as task_done, favorite, find_all as task_find_all,
             find_by_id as task_find_by_id, find_by_pattern as task_find_by_pattern, find_favorite,
             find_ongoing, insert as task_insert, undo as task_undo, update as task_update,
         },
@@ -371,6 +372,66 @@ pub async fn test_task_find_by_id() {
     // NOTE(alex): Find with id
     let request = test::TestRequest::get()
         .uri(&format!("/tasks/{}", task.id))
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
+
+// TODO(alex) [high] 2021-07-15: Finish adding missing routes for task, then do the same for users.
+#[actix_rt::test]
+pub async fn test_task_favorite() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(favorite);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Favorite
+    let request = test::TestRequest::post()
+        .uri(&format!("/tasks/favorite/{}", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token.clone()))
+        .cookie(cookies.clone())
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::FOUND);
+}
+
+#[actix_rt::test]
+pub async fn test_task_find_favorite() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(favorite);
+        cfg.service(find_favorite);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Favorite
+    let task_favorite_request = test::TestRequest::post()
+        .uri(&format!("/tasks/favorite/{}", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token.clone()))
+        .cookie(cookies.clone())
+        .to_request();
+    let task_favorite_response: ServiceResponse =
+        test::call_service(&mut app, task_favorite_request).await;
+    assert_eq!(task_favorite_response.status(), StatusCode::FOUND);
+
+    // NOTE(alex): Retrieve the session cookies to insert them into the find favorite request.
+    let session_cookies = task_favorite_response.response().cookies();
+    let cookies_str = session_cookies
+        .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+        .collect::<String>();
+    let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+    // NOTE(alex): Find favorite
+    let request = test::TestRequest::get()
+        .uri("/tasks/favorite")
+        .cookie(cookies.clone())
         .to_request();
     let response = test::call_service(&mut app, request).await;
 

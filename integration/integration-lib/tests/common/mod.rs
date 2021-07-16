@@ -2,7 +2,6 @@ use actix_web::web;
 use integration_lib::create_database;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
-
 pub async fn setup_data() -> web::Data<Pool<Sqlite>> {
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(env!("DATABASE_FILE"))
@@ -37,7 +36,14 @@ macro_rules! setup_app {
                     .name("auth-cookie")
                     .login_deadline(Duration::minutes(10))
                     .secure(false),
-            ));
+            ))
+            .wrap(
+                CookieSession::signed(&[0; 32])
+                    .name("session-cookie")
+                    .secure(false)
+                    // WARNING(alex): This uses the `time` crate, not `std::time`!
+                    .expires_in_time(Duration::minutes(5)),
+            );
         let mut app = test::init_service(app).await;
 
         let (cookies, bearer_token) = {

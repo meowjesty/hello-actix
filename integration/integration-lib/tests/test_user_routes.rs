@@ -1,6 +1,7 @@
 mod common;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService};
+use actix_session::CookieSession;
 use actix_web::{
     cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
 };
