@@ -201,7 +201,12 @@ mod tests {
         create_database,
         tasks::{
             models::{InsertTask, Task, UpdateTask},
-            routes::{delete as task_delete, insert as task_insert, update as task_update},
+            routes::{
+                delete as task_delete, done as task_done, favorite, find_all as task_find_all,
+                find_by_id as task_find_by_id, find_by_pattern as task_find_by_pattern,
+                find_favorite, find_ongoing, insert as task_insert, undo as task_undo,
+                update as task_update,
+            },
         },
         users::{
             models::{InsertUser, LoggedUser, LoginUser, User},
@@ -229,9 +234,11 @@ mod tests {
     // is logged in, so the tests must be run with:
     // cargo test -- --test-threads=1
     // Running them in parallel may fail!
-    #[macro_export]
     macro_rules! setup_app {
         ($configure: expr) => {{
+            // TODO(alex) [low] 2021-07-16: Why is rust complaining when I put this outside?
+            use actix_session::CookieSession;
+
             let data = setup_data().await;
             let app = App::new()
                 .app_data(data.clone())
@@ -243,7 +250,14 @@ mod tests {
                         .name("auth-cookie")
                         .login_deadline(Duration::minutes(10))
                         .secure(false),
-                ));
+                ))
+                .wrap(
+                    CookieSession::signed(&[0; 32])
+                        .name("session-cookie")
+                        .secure(false)
+                        // WARNING(alex): This uses the `time` crate, not `std::time`!
+                        .expires_in_time(Duration::minutes(5)),
+                );
             let mut app = test::init_service(app).await;
 
             let (cookies, bearer_token) = {
@@ -287,6 +301,27 @@ mod tests {
             };
 
             (app, bearer_token, cookies)
+        }};
+    }
+
+    macro_rules! pre_insert_task {
+        ($bearer_token: expr, $cookies: expr, $app: expr) => {{
+            let insert_task = InsertTask {
+                non_empty_title: "Re-watch Cowboy Bebop".to_string(),
+                details: "Good show.".to_string(),
+            };
+
+            let insert_task_request = test::TestRequest::post()
+                .uri("/tasks")
+                .insert_header(("Authorization".to_string(), $bearer_token.clone()))
+                .cookie($cookies.clone())
+                .set_json(&insert_task)
+                .to_request();
+            let insert_task_response = test::call_service(&mut $app, insert_task_request).await;
+            assert!(insert_task_response.status().is_success());
+
+            let task: Task = test::read_body_json(insert_task_response).await;
+            task
         }};
     }
 
@@ -401,22 +436,8 @@ mod tests {
         };
 
         let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
 
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
-        };
-
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .insert_header(("Authorization".to_string(), bearer_token.clone()))
-            .cookie(cookies.clone())
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
-
-        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
             id: task.id,
             new_title: format!("{}, and Yu Yu Hakusho", task.title),
@@ -443,22 +464,8 @@ mod tests {
         };
 
         let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
 
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
-        };
-
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .insert_header(("Authorization".to_string(), bearer_token.clone()))
-            .cookie(cookies.clone())
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
-
-        let task: Task = test::read_body_json(insert_task_response).await;
         let update_task = UpdateTask {
             id: task.id,
             new_title: " \n\t".to_string(),
@@ -485,22 +492,7 @@ mod tests {
         };
 
         let (mut app, bearer_token, cookies) = setup_app!(configure);
-
-        let insert_task = InsertTask {
-            non_empty_title: "Re-watch Cowboy Bebop".to_string(),
-            details: "Good show.".to_string(),
-        };
-
-        let insert_task_request = test::TestRequest::post()
-            .uri("/tasks")
-            .insert_header(("Authorization".to_string(), bearer_token.clone()))
-            .cookie(cookies.clone())
-            .set_json(&insert_task)
-            .to_request();
-        let insert_task_response = test::call_service(&mut app, insert_task_request).await;
-        assert!(insert_task_response.status().is_success());
-
-        let task: Task = test::read_body_json(insert_task_response).await;
+        let task = pre_insert_task!(bearer_token, cookies, app);
 
         // NOTE(alex): Delete
         let request = test::TestRequest::delete()
@@ -530,5 +522,200 @@ mod tests {
         let response = test::call_service(&mut app, request).await;
 
         assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_mark_as_done() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_done);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Done
+        let request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_undo() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_done);
+            cfg.service(task_undo);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Done
+        let task_done_request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .to_request();
+        let task_done_response = test::call_service(&mut app, task_done_request).await;
+        assert!(task_done_response.status().is_success());
+
+        // NOTE(alex): Undo
+        let request = test::TestRequest::delete()
+            .uri(&format!("/tasks/{}/undo", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token))
+            .cookie(cookies)
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert!(response.status().is_success());
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_all() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_find_all);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let _ = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Find all
+        let request = test::TestRequest::get().uri("/tasks").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_ongoing_tasks() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_done);
+            cfg.service(find_ongoing);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let _ = pre_insert_task!(bearer_token, cookies, app);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Done
+        let task_done_request = test::TestRequest::post()
+            .uri(&format!("/tasks/{}/done", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .to_request();
+        let task_done_response = test::call_service(&mut app, task_done_request).await;
+        assert!(task_done_response.status().is_success());
+
+        // NOTE(alex): Find ongoing tasks only
+        let request = test::TestRequest::get().uri("/tasks/ongoing").to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_by_pattern() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_find_by_pattern);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let _ = pre_insert_task!(bearer_token, cookies, app);
+
+        let title_pattern = "?title=Watch&details=.";
+        // NOTE(alex): Find tasks with title pattern
+        let request = test::TestRequest::get()
+            .uri(&format!("/tasks{}", title_pattern))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_by_id() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(task_find_by_id);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Find with id
+        let request = test::TestRequest::get()
+            .uri(&format!("/tasks/{}", task.id))
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_favorite() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(favorite);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Favorite
+        let request = test::TestRequest::post()
+            .uri(&format!("/tasks/favorite/{}", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
+    }
+
+    #[actix_rt::test]
+    pub async fn test_task_find_favorite() {
+        let configure = |cfg: &mut ServiceConfig| {
+            cfg.service(task_insert);
+            cfg.service(favorite);
+            cfg.service(find_favorite);
+        };
+
+        let (mut app, bearer_token, cookies) = setup_app!(configure);
+        let task = pre_insert_task!(bearer_token, cookies, app);
+
+        // NOTE(alex): Favorite
+        let task_favorite_request = test::TestRequest::post()
+            .uri(&format!("/tasks/favorite/{}", task.id))
+            .insert_header(("Authorization".to_string(), bearer_token.clone()))
+            .cookie(cookies.clone())
+            .to_request();
+        let task_favorite_response: ServiceResponse =
+            test::call_service(&mut app, task_favorite_request).await;
+        assert_eq!(task_favorite_response.status(), StatusCode::FOUND);
+
+        // NOTE(alex): Retrieve the session cookies to insert them into the find favorite request.
+        let session_cookies = task_favorite_response.response().cookies();
+        let cookies_str = session_cookies
+            .flat_map(|cookie| cookie.to_string().chars().collect::<Vec<_>>())
+            .collect::<String>();
+        let cookies = Cookie::parse_encoded(cookies_str).unwrap();
+
+        // NOTE(alex): Find favorite
+        let request = test::TestRequest::get()
+            .uri("/tasks/favorite")
+            .cookie(cookies.clone())
+            .to_request();
+        let response = test::call_service(&mut app, request).await;
+
+        assert_eq!(response.status(), StatusCode::FOUND);
     }
 }
