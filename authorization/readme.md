@@ -1,8 +1,5 @@
 # 6 Authorization
 
-TODO(alex) [mid] 2021-07-13: This project changed quite a bit with the use of Bearer authentication,
-it requires a decent rewrite.
-
 ## 6.1 The tour that never ends
 
 We've been through a lot of `actix-web` and `actix-extras` so far. Hopefully you've learned enough
@@ -103,7 +100,18 @@ Trying to reach any other service without these conditions will give you a nice
 `ErrorUnauthorized(..)` of some sort. So you cannot insert, or delete a `Task` without being logged
 in first.
 
+Up until now we were just using `Identity::remember` to save the user in the `auth-cookie`, but now
+`login` must have a way of generating an authorization token.
+Our token creation is just a [`Hash`](https://doc.rust-lang.org/std/hash/trait.Hash.html) of the
+user, not a secure way of handling things, but it's simple and good enough for this particular
+project.
+
 ## 6.4 Next up
 
-The [integration](../integration/) project contains another re-structuring to allow tests and
-services to live in different files.
+Things stayed relatively the same in this one, `HttpAuthentication` came in as an add-on, with the
+biggest changes being token generation in `login`, and `HttpAuthentication::bearer` being sprinkled
+in services that we want to protect.
+
+The next project, [integration](../integration/), contains another "project" re-structuring to allow
+tests and services to live in different files. We'll be separating it into a `lib` project and a
+`bin` that uses it.
