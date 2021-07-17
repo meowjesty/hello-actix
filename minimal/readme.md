@@ -1,4 +1,4 @@
-# 1. Minimal
+# 1 Minimal
 
 ## 1.1 Devs, start your servers
 

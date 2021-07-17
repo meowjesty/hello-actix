@@ -146,13 +146,71 @@ These 3 pieces are all we'll be needing to go on with the tests.
 
 ## 7.4 Back to the [users](integration-lib/tests/test_user_routes.rs)
 
-TODO(alex) [high] 2021-07-16: Continue with a brief explanation of test_users_update, which uses
-both macros, and then of user_logout, which is a big one.
+Let's jump to the `/users` update test:
 
-TODO(alex) [mid] 2021-07-15: Write about the changes:
+```rust
+#[actix_rt::test]
+pub async fn test_user_update_valid_user()
+```
 
-- Split project into bin and lib for test purposes;
-- Dive deeper on testing:
-  - Mention single-threaded only rule for tests;
-    - `test::read_*` functions as a way to extract data;
-    - If you get 404, check that every required service was added to the test;
+We start by creating a configuration closure with the routes we're interested in testing. Even
+though the `user_insert` service is already part of the `setup_app!` macro, I left it there to make
+it clear that we depend on this service for the test.
+
+The macro invocation of `setup_app!` returns the running server (`app`), the `bearer_token` and
+`cookies`, both of which will be inserted in the test's request headers.
+
+The next invocation of `pre_insert_user!` is our shorthand for inserting a `User` into the database,
+this is the `User` that we will be updating.
+
+After all this setup, we're finally ready to create the `TestRequest` we're interested in, with the
+help of
+[`TestRequest::insert_header`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html#method.insert_header),
+and
+[`TestRequest::cookie`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html#method.cookie).
+
+Finally, we just assert if the `ServiceResponse::status()` was successful. Some tests will compare
+the [`StatusCode`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html)
+directly against what we expect from the service, instead of if they were just successful, this is
+to cover some services that respond with
+[`StatusCode::FOUND`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html#associatedconstant.FOUND), or
+[`StatusCode::NOT_MODIFIED`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html#associatedconstant.NOT_MODIFIED).
+
+Most of the tests will look like this, except the ones that don't require authentication. I've left
+the `test_user_logout` as an "expanded" test case, so it doesn't make use of macros.
+
+## 7.5 Testing [tasks](integration-lib/tests/test_task_routes.rs)
+
+These tests are structured in much the same way as the
+[test_user_routes](integration-lib/tests/test_user_routes.rs) are. It comes with its own macro
+`pre_insert_task` that inserts a `Task` into the database.
+
+`test_task_insert_valid_task` was left as the expanded version, much like `test_user_logout` was,
+and it covers the whole process of setting up `App`, a `LoggedUser`, and finally using the `/tasks`
+insert service.
+
+I don't feel that there is much to be gained by going over every test here, as they're using the
+same features you already saw in [test_user_routes](integration-lib/tests/test_user_routes.rs). If
+you feel that I should explain something here, please open up an issue!
+
+## 7.6 Some notes on testing
+
+The main issue I've run into when writing these tests was getting a `404` because I kept forgetting
+to add the service to `ServiceConfig`, so if you get a `404`, check you've added the services you're
+using (in the case of these projects, also check the macros), and check that the `TestRequest::uri`s
+are correct.
+
+We're not using any mocking library, we use a test database instead, this means that these tests may
+not play well with concurrency, plus are limited with by the
+[`PoolOptions::max_connections`](https://docs.rs/sqlx/0.5.5/sqlx/pool/struct.PoolOptions.html#method.max_connections).
+
+I've been running these tests in single-threaded mode with:
+
+```sh
+# Runs every test in a single thread
+cargo test -- --test-threads=1
+```
+
+## 7.7 The end (or is it?)
+
+That's it so far, if you read this and have some suggestions / critics, please open up an issue!

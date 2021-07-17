@@ -67,6 +67,20 @@ workspace folder with `cargo run -p cookies`.
 If you want to compile all the projects in one go, just do a `cargo build` or `cargo check` in the
 workspace folder.
 
+## How do I test this?
+
+The tests were designed to be run in **single-threaded** mode only!
+
+You may run the following commands from the root (workspace) folder:
+
+```sh
+# Runs every test from each project
+cargo test -- --test-threads=1
+
+# Runs every test from [project]
+cargo test -p sqlite -- --test-threads=1
+```
+
 ### List of dependencies used
 
 - [actix-web](https://github.com/actix/actix-web): This one is kinda the whole point of the project;
