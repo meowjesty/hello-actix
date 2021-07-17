@@ -235,9 +235,12 @@ There is also the
 [`actix_web::test`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/index.html) module, that
 provides some nice testing facilities.
 
+We'll be talking only about the tests in [main.rs](src/main.rs), as the tests in
+[routes](src/routes.rs) are a bit more involved, and will be discussed in later projects.
+
 ### 3.3.1 Test: `main.rs`
 
-[`main.rs`](src/main.rs) tests will be focused on the `index` service.
+[main.rs](src/main.rs) tests will be focused on the `index` service.
 
 ```rust
 #[actix_rt::test]
@@ -263,43 +266,12 @@ async fn test_index_post
 ```
 
 Almost exactly the same thing as our `GET` test, but now we're testing a `POST` with path `/`. This
-time our assertion expects an error status code.
-
-### 3.3.2 Test: `routes.rs`
-
-These tests are a bit more involved, we now have a `setup_data` function to create our test
-database. And every test will configure the `App` with only the appropriate services for each. So
-tests that require a `Task` to be present, will register both the `insert` service, plus whatever
-other service the test is checking.
-
-Let's take 2 tests to take a closer look:
-
-```rust
-#[actix_rt::test]
-async fn test_insert_valid
-```
-
-It starts calling `setup_data` to handle the database `Data<Pool>` creation, then we call
-`init_service` to create the app. We use `TestRequest::set_json` to insert our test `Task` as a json
-in the request body, and the rest follows the same pattern as the `index` test.
-
-```rust
-#[actix_rt::test]
-async fn test_update_valid
-```
-
-The only real difference here is that we do the whole `insert` procedure first, and only then we use
-the `update` service. This means that we must configure `App` with both `insert` and `update`
-services.
-
-These are the basics for testing an actix-web server. There is one piece that I'll leave unexplained
-here, as it doesn't have much to do with testing, the
-[`ServiceResponse::into_body`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/struct.ServiceResponse.html#method.into_body)
-function.
+time our assertion expects an error status code, as there is no service set for `/` that expects
+a `POST` method.
 
 ## 3.4 Wrapping up
 
-On this project we dipped our toes in actix's `middleware`, we've seen how to test services, and
+On this project we dipped our toes in actix's `middleware`, we've dipped our toes on testing, and
 learned a bit about how to use `sqlx` with actix.
 
 The `Responder` trait is a big one to know, and allows us to simply return `impl Responder` on the

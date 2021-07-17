@@ -245,5 +245,5 @@ Set up some routes (either with `get`, `post`, and friends, or the `route` macro
 services, implement the `ResponseError` trait (or convert your errors manually into response, do not
 recommend), and finally, create and run your `HttpServer`.
 
-On the next example ([`sqlite`](../sqlite/)) we'll be introducing tests, SQL and a more actix, stay
+On the next example ([`sqlite`](../sqlite/)) we'll be introducing tests, SQL and more actix, stay
 tuned!
