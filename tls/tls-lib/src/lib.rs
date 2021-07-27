@@ -1,4 +1,4 @@
-use std::{convert::TryInto, fs::File, io::BufReader};
+use std::io::BufReader;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService, RequestIdentity};
 use actix_session::CookieSession;
@@ -61,6 +61,17 @@ pub async fn validator(
     }
 }
 
+pub fn setup_tls() -> Result<rustls::ServerConfig, rustls::TLSError> {
+    let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+    let cert_file = &mut BufReader::new(&include_bytes!("../../cert.pem")[..]);
+    let key_file = &mut BufReader::new(&include_bytes!("../../key.pem")[..]);
+    let cert_chain = rustls::internal::pemfile::certs(cert_file).expect("Invalid cert file!");
+    let keys = rustls::internal::pemfile::pkcs8_private_keys(key_file).expect("Invalid key file!");
+    server_config.set_single_cert(cert_chain, keys.first().cloned().expect("No key found!"))?;
+
+    Ok(server_config)
+}
+
 pub async fn start_app() -> std::io::Result<()> {
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(env!("DATABASE_FILE"))
@@ -70,7 +81,7 @@ pub async fn start_app() -> std::io::Result<()> {
         .max_connections(5)
         .connect_with(db_options)
         .await
-        .unwrap();
+        .expect("Failed opening database!");
 
     if option_env!("NEW_DATABASE").is_some() {
         create_database(&database_pool).await.unwrap();
@@ -78,14 +89,7 @@ pub async fn start_app() -> std::io::Result<()> {
 
     let data = actix_web::web::Data::new(database_pool);
 
-    let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-    let cert_file = &mut BufReader::new(&include_bytes!("../../cert.pem")[..]);
-    let key_file = &mut BufReader::new(&include_bytes!("../../key.pem")[..]);
-    let cert_chain = rustls::internal::pemfile::certs(cert_file).unwrap();
-    let mut keys = rustls::internal::pemfile::pkcs8_private_keys(key_file).unwrap();
-    server_config
-        .set_single_cert(cert_chain, keys.remove(0))
-        .unwrap();
+    let rustls_server_config = setup_tls().expect("Failed setting up TLS!");
 
     HttpServer::new(move || {
         App::new()
@@ -109,7 +113,7 @@ pub async fn start_app() -> std::io::Result<()> {
             )
             .wrap(middleware::Logger::default())
     })
-    .bind_rustls(env!("ADDRESS"), server_config)?
+    .bind_rustls(env!("ADDRESS"), rustls_server_config)?
     .run()
     .await
 }

@@ -295,6 +295,27 @@ pub async fn test_task_undo() {
 }
 
 #[actix_rt::test]
+pub async fn test_task_undo_when_no_tasks_are_done() {
+    let configure = |cfg: &mut ServiceConfig| {
+        cfg.service(task_insert);
+        cfg.service(task_undo);
+    };
+
+    let (mut app, bearer_token, cookies) = setup_app!(configure);
+    let task = pre_insert_task!(bearer_token, cookies, app);
+
+    // NOTE(alex): Undo
+    let request = test::TestRequest::delete()
+        .uri(&format!("/tasks/{}/undo", task.id))
+        .insert_header(("Authorization".to_string(), bearer_token))
+        .cookie(cookies)
+        .to_request();
+    let response = test::call_service(&mut app, request).await;
+
+    assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+}
+
+#[actix_rt::test]
 pub async fn test_task_find_all() {
     let configure = |cfg: &mut ServiceConfig| {
         cfg.service(task_insert);
