@@ -2,7 +2,7 @@
 
 ## 7.1 The three Ts: Tests, tests, tests
 
-It's time to finally dig-in into testing our actix services. So far I've asked of you to overlook
+It's time to finally dig-in into testing our actix services. So far I've asked you to overlook
 the tests, and focus on the actix features. Now we're going to make sure that the things we've been
 using actually work!
 
@@ -196,7 +196,7 @@ you feel that I should explain something here, please open up an issue!
 ## 7.6 Some notes on testing
 
 The main issue I've run into when writing these tests was getting a `404` because I kept forgetting
-to add the service to `ServiceConfig`, so if you get a `404`, check you've added the services you're
+to add a service to `ServiceConfig`, so if you get a `404`, check you've added the services you're
 using (in the case of these projects, also check the macros), and check that the `TestRequest::uri`s
 are correct.
 
@@ -211,6 +211,7 @@ I've been running these tests in single-threaded mode with:
 cargo test -- --test-threads=1
 ```
 
-## 7.7 The end (or is it?)
+## 7.7 Tune in next time for HTTPS
 
-That's it so far, if you read this and have some suggestions / critics, please open up an issue!
+This chapter covered a big portion of testing with actix-web. On the next project
+[tls](../tls/readme.md), we'll set up TLS and have our server running on HTTPS.

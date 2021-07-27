@@ -63,8 +63,8 @@ pub async fn validator(
 
 pub fn setup_tls() -> Result<rustls::ServerConfig, rustls::TLSError> {
     let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-    let cert_file = &mut BufReader::new(&include_bytes!("../../cert.pem")[..]);
-    let key_file = &mut BufReader::new(&include_bytes!("../../key.pem")[..]);
+    let cert_file = &mut BufReader::new(&include_bytes!("../certificates/cert.pem")[..]);
+    let key_file = &mut BufReader::new(&include_bytes!("../certificates/key.pem")[..]);
     let cert_chain = rustls::internal::pemfile::certs(cert_file).expect("Invalid cert file!");
     let keys = rustls::internal::pemfile::pkcs8_private_keys(key_file).expect("Invalid key file!");
     server_config.set_single_cert(cert_chain, keys.first().cloned().expect("No key found!"))?;

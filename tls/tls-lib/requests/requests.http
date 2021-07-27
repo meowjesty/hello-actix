@@ -5,7 +5,7 @@
 ################## General requests
 
 # @name get_index
-GET {{baseUrl}}
+GET {{baseUrl}} HTTP/1.2
 
 ###
 
@@ -14,7 +14,7 @@ GET {{baseUrl}}
 ###
 
 # @name insert_user
-POST {{baseUrl}}/users/register HTTP/1.1
+POST {{baseUrl}}/users/register
 Content-Type: application/json
 
 {
