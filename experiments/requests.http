@@ -1,7 +1,7 @@
 @baseUrl = http://127.0.0.1:8080
 
 # @name create
-POST {{baseUrl}}/todos HTTP/1.1
+POST {{baseUrl}}/todos
 content-type: application/json
 
 {
@@ -12,7 +12,7 @@ content-type: application/json
 ####
 
 # @name create_bad_request
-POST {{baseUrl}}/todos HTTP/1.1
+POST {{baseUrl}}/todos
 content-type: application/json
 
 {
@@ -23,7 +23,7 @@ content-type: application/json
 ####
 
 # @name create_invalid
-POST {{baseUrl}}/todos HTTP/1.1
+POST {{baseUrl}}/todos
 content-type: application/json
 
 {
@@ -35,7 +35,7 @@ content-type: application/json
 ####
 
 # @name create_malicious
-POST {{baseUrl}}/todos HTTP/1.1
+POST {{baseUrl}}/todos
 content-type: application/json
 
 {
@@ -46,12 +46,12 @@ content-type: application/json
 ####
 
 # @name delete_todo
-DELETE {{baseUrl}}/todos/5 HTTP/1.1
+DELETE {{baseUrl}}/todos/5
 
 ####
 
 # @name update_todo
-PUT {{baseUrl}}/todos/2 HTTP/1.1
+PUT {{baseUrl}}/todos/2
 content-type: application/json
 
 {
@@ -62,36 +62,36 @@ content-type: application/json
 ####
 
 # @name index
-GET {{baseUrl}}/ HTTP/1.1
+GET {{baseUrl}}/
 
 ####
 
 # @name find_ongoing
-GET {{baseUrl}}/todos/ongoing HTTP/1.1
+GET {{baseUrl}}/todos/ongoing
 
 ####
 
 # @name find_all
-GET {{baseUrl}}/todos/all HTTP/1.1
+GET {{baseUrl}}/todos/all
 
 ####
 
 # @name mark_done
-POST {{baseUrl}}/todos/1 HTTP/1.1
+POST {{baseUrl}}/todos/1
 
 ####
 
 # @name get_by_id
-GET {{baseUrl}}/todos/1 HTTP/1.1
+GET {{baseUrl}}/todos/1
 
 ####
 
 # @name undo_todo
-DELETE {{baseUrl}}/todos/undo/1 HTTP/1.1
+DELETE {{baseUrl}}/todos/undo/1
 
 ####
 
 # @name find_by_query
-GET {{baseUrl}}/todos?task=todo HTTP/1.1
+GET {{baseUrl}}/todos?task=todo
 
 ####

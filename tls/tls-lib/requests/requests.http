@@ -5,7 +5,7 @@
 ################## General requests
 
 # @name get_index
-GET {{baseUrl}} HTTP/1.2
+GET {{baseUrl}}
 
 ###
 
@@ -25,29 +25,29 @@ Content-Type: application/json
 ###
 
 # @name delete_user
-DELETE  {{baseUrl}}/users/1 HTTP/1.1
+DELETE  {{baseUrl}}/users/1
 Authorization: Bearer {{auth_token}}
 
 ###
 
 # @name delete_non_existant_user
-DELETE  {{baseUrl}}/users/1000 HTTP/1.1
+DELETE  {{baseUrl}}/users/1000
 Authorization: Bearer {{auth_token}}
 
 ###
 
 # @name find_all_users
-GET {{baseUrl}}/users HTTP/1.1
+GET {{baseUrl}}/users
 
 ####
 
 # @name find_user_by_id
-GET {{baseUrl}}/users/1 HTTP/1.1
+GET {{baseUrl}}/users/1
 
 ###
 
 # @name update_user
-PUT {{baseUrl}}/users HTTP/1.1
+PUT {{baseUrl}}/users
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -60,7 +60,7 @@ Content-Type: application/json
 ###
 
 # @name update_invalid_user_username
-PUT {{baseUrl}}/users HTTP/1.1
+PUT {{baseUrl}}/users
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -73,7 +73,7 @@ Content-Type: application/json
 ###
 
 # @name update_empty_user_valid_password
-PUT {{baseUrl}}/users HTTP/1.1
+PUT {{baseUrl}}/users
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -86,7 +86,7 @@ Content-Type: application/json
 ###
 
 # @name update_non_existant_user
-PUT {{baseUrl}}/users HTTP/1.1
+PUT {{baseUrl}}/users
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -99,7 +99,7 @@ Content-Type: application/json
 ###
 
 # @name login
-POST {{baseUrl}}/users/login HTTP/1.1
+POST {{baseUrl}}/users/login
 Content-Type: application/json
 
 {
@@ -110,7 +110,7 @@ Content-Type: application/json
 ###
 
 # @name logout
-DELETE {{baseUrl}}/users/logout HTTP/1.1
+DELETE {{baseUrl}}/users/logout
 Authorization: Bearer {{auth_token}}
 
 ###
@@ -120,7 +120,7 @@ Authorization: Bearer {{auth_token}}
 ###
 
 # @name insert_task
-POST {{baseUrl}}/tasks HTTP/1.1
+POST {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -132,7 +132,7 @@ Content-Type: application/json
 ####
 
 # @name insert_invalid_task_title
-POST {{baseUrl}}/tasks HTTP/1.1
+POST {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -144,7 +144,7 @@ Content-Type: application/json
 ####
 
 # @name insert_empty_task_details
-POST {{baseUrl}}/tasks HTTP/1.1
+POST {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -156,29 +156,29 @@ Content-Type: application/json
 ###
 
 # @name delete_task
-DELETE  {{baseUrl}}/tasks/1 HTTP/1.1
+DELETE  {{baseUrl}}/tasks/1
 Authorization: Bearer {{auth_token}}
 
 ###
 
 # @name delete_non_existant_task
-DELETE  {{baseUrl}}/tasks/1000 HTTP/1.1
+DELETE  {{baseUrl}}/tasks/1000
 Authorization: Bearer {{auth_token}}
 
 ###
 
 # @name find_all_tasks
-GET {{baseUrl}}/tasks HTTP/1.1
+GET {{baseUrl}}/tasks
 
 ###
 
 # @name find_task_by_id
-GET {{baseUrl}}/tasks/1 HTTP/1.1
+GET {{baseUrl}}/tasks/1
 
 ###
 
 # @name update_task
-PUT {{baseUrl}}/tasks HTTP/1.1
+PUT {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -191,7 +191,7 @@ Content-Type: application/json
 ###
 
 # @name update_invalid_task_title
-PUT {{baseUrl}}/tasks HTTP/1.1
+PUT {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -204,7 +204,7 @@ Content-Type: application/json
 ####
 
 # @name update_empty_task_details
-PUT {{baseUrl}}/tasks HTTP/1.1
+PUT {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -217,7 +217,7 @@ Content-Type: application/json
 ###
 
 # @name update_non_existant_task
-PUT {{baseUrl}}/tasks HTTP/1.1
+PUT {{baseUrl}}/tasks
 Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
@@ -230,17 +230,17 @@ Content-Type: application/json
 ###
 
 # @name favorite
-POST {{baseUrl}}/tasks/favorite/1 HTTP/1.1
+POST {{baseUrl}}/tasks/favorite/1
 
 ###
 
 # @name favorite_non_existant_task
-POST {{baseUrl}}/tasks/favorite/10000 HTTP/1.1
+POST {{baseUrl}}/tasks/favorite/10000
 
 ###
 
 # @name find_favorite
-GET {{baseUrl}}/tasks/favorite HTTP/1.1
+GET {{baseUrl}}/tasks/favorite
 
 ###
 

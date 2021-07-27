@@ -1,7 +1,7 @@
 @baseUrl = http://127.0.0.1:8080
 
 # @name insert_user
-POST {{baseUrl}}/users HTTP/1.1
+POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 ####
 
 # @name insert_invalid_user_username
-POST {{baseUrl}}/users HTTP/1.1
+POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
@@ -23,7 +23,7 @@ Content-Type: application/json
 ####
 
 # @name insert_invalid_empty_user_password
-POST {{baseUrl}}/users HTTP/1.1
+POST {{baseUrl}}/users
 Content-Type: application/json
 
 {

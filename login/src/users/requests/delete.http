@@ -1,9 +1,9 @@
 @baseUrl = http://127.0.0.1:8080
 
 # @name delete
-DELETE  {{baseUrl}}/users/1 HTTP/1.1
+DELETE  {{baseUrl}}/users/1
 
 ####
 
 # @name delete_incorrect_id
-DELETE  {{baseUrl}}/users/1000 HTTP/1.1
+DELETE  {{baseUrl}}/users/1000

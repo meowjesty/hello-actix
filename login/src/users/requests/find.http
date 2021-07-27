@@ -1,9 +1,9 @@
 @baseUrl = http://127.0.0.1:8080
 
 # @name find_all
-GET {{baseUrl}}/users HTTP/1.1
+GET {{baseUrl}}/users
 
 ####
 
 # @name find_by_id
-GET {{baseUrl}}/users/1 HTTP/1.1
+GET {{baseUrl}}/users/1

@@ -2,6 +2,9 @@
 
 ## ⚠️🚧🛠️ **Under Construction** 🛠️🚧⚠️
 
+If you find mistakes, typos, horrible practices being used, please consider opening up an
+[issue](https://github.com/meowjesty/hello-actix/issues/new) and telling me all about it!
+
 ## What is this?
 
 A bunch of **To-do** web apps written with an increasing amount of features using the
@@ -55,6 +58,8 @@ going much further than that into security practices here.
 7. [integration](integration/): We go a bit deeper in testing an actix-web app, bring a lantern and
    snacks;
 
+8. [tls](tls/): It's HTTPS time;
+
 ## How do I run this?
 
 - You must have [Rust](https://www.rust-lang.org/) installed! These examples were compiled on
@@ -103,3 +108,4 @@ cargo test -p sqlite -- --test-threads=1
   feature ([`impl FromRequest`](login/src/tasks/models.rs#L171));
 - [time](https://github.com/time-rs/time): actix cookies expect a `Duration` from this crate when
   setting cookie expiration;
+- [rustls](https://github.com/ctz/rustls): TLS library for our HTTPS server;

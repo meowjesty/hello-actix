@@ -1,11 +1,11 @@
 @baseUrl = http://127.0.0.1:8080
 
 # @name find_all
-GET {{baseUrl}}/tasks HTTP/1.1
+GET {{baseUrl}}/tasks
 Authorization: Basic user:user
 
 ####
 
 # @name find_by_id
-GET {{baseUrl}}/tasks/1 HTTP/1.1
+GET {{baseUrl}}/tasks/1
 Authorization: Basic user:user
