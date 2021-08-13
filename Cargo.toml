@@ -1,13 +1,4 @@
 [workspace]
-name = "hello-actix"
-version = "0.1.0"
-authors = ["meowjesty <meowjesty_nyan@outlook.com>"]
-edition = "2018"
-description = "Hello, actix!"
-homepage = "https://github.com/meowjesty/hello-actix"
-repository = "https://github.com/meowjesty/hello-actix/"
-license = "MIT OR Apache-2.0"
-keywords = ["actix-web", "webdev", "reference"]
 
 members = [
     "minimal",
@@ -20,5 +11,4 @@ members = [
     "integration/integration-lib",
     "tls",
     "tls/tls-lib",
-    "experiments",
 ]
