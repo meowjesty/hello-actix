@@ -1,2 +1,1 @@
-select * from Task
-where Task.user_id = $1;
+select * from Task;

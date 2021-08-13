@@ -1,3 +1,2 @@
 select *
-from OngoingTask
-where Task.user_id = $1;
+from OngoingTask;

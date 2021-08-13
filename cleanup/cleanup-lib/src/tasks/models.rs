@@ -12,7 +12,7 @@ use crate::errors::AppError;
 #[derive(Clone, Debug, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: i64,
-    pub user_id: i64,
+    pub created_by: i64,
     pub title: String,
     pub details: String,
 }
@@ -37,17 +37,18 @@ pub struct QueryTask {
 }
 
 impl InsertTask {
-    pub async fn insert(self, db_pool: &SqlitePool, user_id: i64) -> Result<Task, AppError> {
+    pub async fn insert(self, db_pool: &SqlitePool, created_by: i64) -> Result<Task, AppError> {
         let mut connection = db_pool.acquire().await?;
         let result = sqlx::query(INSERT)
             .bind(&self.non_empty_title)
             .bind(&self.details)
+            .bind(created_by)
             .execute(&mut connection)
             .await?;
 
         let task = Task {
             id: result.last_insert_rowid(),
-            user_id,
+            created_by,
             title: self.non_empty_title,
             details: self.details,
         };
@@ -97,10 +98,11 @@ impl Task {
         Ok(result.rows_affected())
     }
 
-    pub async fn done(pool: &SqlitePool, task_id: i64) -> Result<i64, AppError> {
+    pub async fn done(pool: &SqlitePool, task_id: i64, done_by: i64) -> Result<i64, AppError> {
         let mut connection = pool.acquire().await?;
         let result = sqlx::query(DONE)
             .bind(task_id)
+            .bind(done_by)
             .execute(&mut connection)
             .await?;
 

@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use actix_identity::Identity;
 use actix_session::Session;
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
@@ -25,10 +23,7 @@ pub async fn insert(
 pub async fn update(
     db_pool: web::Data<SqlitePool>,
     input: UpdateTask,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     let num_modified = input.update(db_pool.get_ref()).await?;
 
     if num_modified == 0 {
@@ -42,10 +37,7 @@ pub async fn update(
 pub async fn delete(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     let num_modified = Task::delete(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
@@ -65,7 +57,7 @@ pub async fn done(
 ) -> Result<impl Responder, AppError> {
     let logged_user = LoggedUser::get_logged_user(identity)?;
 
-    let done_id = Task::done(db_pool.get_ref(), *id).await?;
+    let done_id = Task::done(db_pool.get_ref(), *id, logged_user.id).await?;
 
     if done_id == 0 {
         Ok(HttpResponse::NotModified().body(format!("Task with id {} not done.", id)))
@@ -80,10 +72,7 @@ pub async fn done(
 pub async fn undo(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     let num_modified = Task::undo(db_pool.get_ref(), *id).await?;
 
     if num_modified == 0 {
@@ -94,12 +83,7 @@ pub async fn undo(
 }
 
 #[get("/tasks")]
-pub async fn find_all(
-    db_pool: web::Data<SqlitePool>,
-    identity: Identity,
-) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
+pub async fn find_all(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_all(db_pool.get_ref()).await?;
 
     if tasks.is_empty() {
@@ -110,12 +94,7 @@ pub async fn find_all(
 }
 
 #[get("/tasks/ongoing")]
-pub async fn find_ongoing(
-    db_pool: web::Data<SqlitePool>,
-    identity: Identity,
-) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
+pub async fn find_ongoing(db_pool: web::Data<SqlitePool>) -> Result<impl Responder, AppError> {
     let tasks = Task::find_ongoing(db_pool.get_ref()).await?;
 
     if tasks.is_empty() {
@@ -129,10 +108,7 @@ pub async fn find_ongoing(
 pub async fn find_by_pattern(
     db_pool: web::Data<SqlitePool>,
     pattern: web::Query<QueryTask>,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     let tasks = Task::find_by_pattern(db_pool.get_ref(), &format!("%{}%", pattern.title)).await?;
 
     if tasks.is_empty() {
@@ -155,10 +131,7 @@ pub async fn find_by_pattern(
 pub async fn find_by_id(
     db_pool: web::Data<SqlitePool>,
     id: web::Path<i64>,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     let task = Task::find_by_id(db_pool.get_ref(), *id).await?;
 
     match task {
@@ -169,15 +142,12 @@ pub async fn find_by_id(
 
 const FAVORITE_TASK_STR: &'static str = "favorite_task";
 
-#[post("/tasks/favorite/{id}")]
+#[post("/tasks/favorite/{id}", wrap = "HttpAuthentication::bearer(validator)")]
 pub async fn favorite(
     db_pool: web::Data<SqlitePool>,
     session: Session,
     id: web::Path<i64>,
-    identity: Identity,
 ) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
     if let Some(old) = session.remove(FAVORITE_TASK_STR) {
         let old_favorite: Task = serde_json::from_str(&old)?;
 
@@ -205,12 +175,7 @@ pub async fn favorite(
 }
 
 #[get("/tasks/favorite")]
-pub async fn find_favorite(
-    session: Session,
-    identity: Identity,
-) -> Result<impl Responder, AppError> {
-    let logged_user = LoggedUser::get_logged_user(identity)?;
-
+pub async fn find_favorite(session: Session) -> Result<impl Responder, AppError> {
     if let Some(task) = session.get::<Task>(FAVORITE_TASK_STR)? {
         Ok(HttpResponse::Found().json(task))
     } else {
