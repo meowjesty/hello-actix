@@ -1,0 +1,17 @@
+[package]
+name = "cleanup"
+version = "0.1.0"
+authors = ["meowjesty <meowjesty_nyan@outlook.com>"]
+edition = "2018"
+description = "Hello, actix!"
+homepage = "https://github.com/meowjesty/hello-actix"
+repository = "https://github.com/meowjesty/hello-actix/cleanup"
+license = "MIT OR Apache-2.0"
+keywords = ["actix-web", "webdev", "reference"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cleanup-lib = { path = "cleanup-lib" }
+actix-web = { version = "4.0.0-beta.8" }
+env_logger = "0.9"

@@ -1,6 +1,6 @@
 use actix_web::web;
+use cleanup_lib::create_database;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
-use tls_lib::create_database;
 
 pub async fn setup_data() -> web::Data<Pool<Sqlite>> {
     let db_options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -26,7 +26,7 @@ pub async fn setup_data() -> web::Data<Pool<Sqlite>> {
 macro_rules! setup_app {
     ($configure: expr) => {{
         let data = setup_data().await;
-        let rustls_server_config = tls_lib::setup_tls().expect("Failed setting up TLS!");
+        let rustls_server_config = cleanup_lib::setup_tls().expect("Failed setting up TLS!");
 
         let app = App::new()
             .app_data(data.clone())

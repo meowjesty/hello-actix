@@ -11,4 +11,6 @@ members = [
     "integration/integration-lib",
     "tls",
     "tls/tls-lib",
+    "cleanup",
+    "cleanup/cleanup-lib",
 ]

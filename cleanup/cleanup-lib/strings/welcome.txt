@@ -1,0 +1,21 @@
+Learning actix by implementing a Todo service?!
+
+The API routes are:
+
+- '/users':
+    - POST '/register': inserts a new user;
+    - DELETE '/{id}': deletes user with {id};
+    - GET: finds all users;
+    - GET '/{id}`: finds user with {id};
+    - PUT '/{id}`: updates user with {id};
+    - POST '/login': user signs in;
+    - DELETE '/logout': user signs off;
+
+- '/tasks':
+    - POST: inserts a new task;
+    - DELETE '/{id}': deletes task with {id};
+    - GET: finds all tasks;
+    - GET '/{id}`: finds task with {id};
+    - PUT '/{id}`: updates task with {id};
+    - POST '/favorite/{id}': (un)favorites task with {id};
+    - GET '/favorite': finds favorited task;
