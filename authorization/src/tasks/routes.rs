@@ -191,9 +191,7 @@ pub(crate) fn task_service(cfg: &mut web::ServiceConfig) {
 #[cfg(test)]
 mod tests {
     use actix_identity::{CookieIdentityPolicy, IdentityService};
-    use actix_web::{
-        cookie::Cookie, http::StatusCode, test, web, web::ServiceConfig, App,
-    };
+    use actix_web::{cookie::Cookie, http::StatusCode, test, web, web::ServiceConfig, App};
     use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
     use time::Duration;
 
@@ -395,8 +393,6 @@ mod tests {
             .cookie(cookies)
             .set_json(&valid_insert_task)
             .to_request();
-        // NOTE(alex): `response` will be of `uknown` type in rust-analyzer. Its concrete type is:
-        // ServiceResponse
         let response = test::call_service(&mut app, request).await;
 
         assert!(response.status().is_success());
@@ -696,8 +692,7 @@ mod tests {
             .insert_header(("Authorization".to_string(), bearer_token.clone()))
             .cookie(cookies.clone())
             .to_request();
-        let task_favorite_response =
-            test::call_service(&mut app, task_favorite_request).await;
+        let task_favorite_response = test::call_service(&mut app, task_favorite_request).await;
         assert_eq!(task_favorite_response.status(), StatusCode::FOUND);
 
         // NOTE(alex): Retrieve the session cookies to insert them into the find favorite request.

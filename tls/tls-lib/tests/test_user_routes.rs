@@ -2,9 +2,7 @@ mod common;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
-use actix_web::{
-    cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
-};
+use actix_web::{cookie::Cookie, http::StatusCode, test, web::ServiceConfig, App};
 use common::setup_data;
 use time::Duration;
 use tls_lib::users::{

@@ -57,12 +57,6 @@ request body, and no headers.
 we've just created, and returns as `ServiceResponse` (not a `HttpResponse`!). And finally, we just
 assert the response as successful.
 
-If for some reason your `response` appears as type `{unknown}`, just add the type manually:
-
-```rust
-let response: ServiceResponse = test_call_service(&mut app, request).await;
-```
-
 The code pattern of this test is pretty consistent with what other tests want, so I'll be using a
 couple of macros to keep things from being repeated.
 

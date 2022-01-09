@@ -3,7 +3,7 @@ mod common;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
 use actix_web::{
-    cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
+    cookie::Cookie, http::StatusCode, test, web::ServiceConfig, App,
 };
 use common::setup_data;
 use time::Duration;
@@ -114,8 +114,6 @@ pub async fn test_task_insert_valid_task() {
         .cookie(cookies)
         .set_json(&valid_insert_task)
         .to_request();
-    // NOTE(alex): `response` will be of `uknown` type in rust-analyzer. Its concrete type is:
-    // ServiceResponse
     let response = test::call_service(&mut app, request).await;
 
     assert!(response.status().is_success());

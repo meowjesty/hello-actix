@@ -63,7 +63,7 @@ going much further than that into security practices here.
 ## How do I run this?
 
 - You must have [Rust](https://www.rust-lang.org/) installed! These examples were compiled on
-version [1.53.0](https://blog.rust-lang.org/2021/06/17/Rust-1.53.0.html).
+version [1.57.0](https://blog.rust-lang.org/2021/12/02/Rust-1.57.0.html).
 
 Each project is completely self-contained, so if you want to run [`cookies`](cookies/), for example,
 you can either run the project from its directory with a simple `cargo run`, or directly from the
