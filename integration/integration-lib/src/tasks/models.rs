@@ -1,4 +1,5 @@
 use actix_web::{
+    body::BoxBody,
     dev::{JsonBody, Payload},
     FromRequest, HttpRequest, HttpResponse, Responder,
 };
@@ -148,7 +149,9 @@ impl Task {
 }
 
 impl Responder for Task {
-    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
+    type Body = BoxBody;
+
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse<Self::Body> {
         let response = match serde_json::to_string(&self) {
             Ok(body) => {
                 // Create response and set content type
@@ -164,14 +167,12 @@ impl Responder for Task {
 }
 
 impl FromRequest for InsertTask {
-    type Config = ();
-
     type Error = AppError;
 
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        JsonBody::new(req, payload, None)
+        JsonBody::new(req, payload, None, false)
             .limit(4056)
             .map(|res: Result<InsertTask, _>| match res {
                 Ok(insert_task) => insert_task.validate().map_err(|fail| AppError::from(fail)),
@@ -182,14 +183,12 @@ impl FromRequest for InsertTask {
 }
 
 impl FromRequest for UpdateTask {
-    type Config = ();
-
     type Error = AppError;
 
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        JsonBody::new(req, payload, None)
+        JsonBody::new(req, payload, None, false)
             .limit(4056)
             .map(|res: Result<UpdateTask, _>| match res {
                 Ok(update_task) => update_task.validate().map_err(|fail| AppError::from(fail)),

@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, Responder};
+use actix_web::{body::BoxBody, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
@@ -143,7 +143,9 @@ impl Task {
 }
 
 impl Responder for Task {
-    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
+    type Body = BoxBody;
+
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse<Self::Body> {
         let response = match serde_json::to_string(&self) {
             Ok(body) => {
                 // Create response and set content type

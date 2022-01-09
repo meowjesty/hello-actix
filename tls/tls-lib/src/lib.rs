@@ -61,13 +61,25 @@ pub async fn validator(
     }
 }
 
-pub fn setup_tls() -> Result<rustls::ServerConfig, rustls::TLSError> {
-    let mut server_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+pub fn setup_tls() -> Result<rustls::ServerConfig, rustls::Error> {
     let cert_file = &mut BufReader::new(&include_bytes!("../certificates/cert.pem")[..]);
+    let certificates = rustls_pemfile::certs(cert_file)
+        .expect("Could not read certificates!")
+        .iter()
+        .map(|bytes| rustls::Certificate(bytes.clone()))
+        .collect();
+
     let key_file = &mut BufReader::new(&include_bytes!("../certificates/key.pem")[..]);
-    let cert_chain = rustls::internal::pemfile::certs(cert_file).expect("Invalid cert file!");
-    let keys = rustls::internal::pemfile::pkcs8_private_keys(key_file).expect("Invalid key file!");
-    server_config.set_single_cert(cert_chain, keys.first().cloned().expect("No key found!"))?;
+    let keys = rustls_pemfile::pkcs8_private_keys(key_file)
+        .expect("Could not read keys!")
+        .iter()
+        .map(|bytes| rustls::PrivateKey(bytes.clone()))
+        .collect::<Vec<rustls::PrivateKey>>();
+
+    let server_config = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certificates, keys.first().expect("Must have key!").clone())?;
 
     Ok(server_config)
 }

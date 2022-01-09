@@ -1,4 +1,5 @@
 use actix_web::{
+    body::BoxBody,
     dev::{JsonBody, Payload},
     FromRequest, HttpRequest, HttpResponse, Responder,
 };
@@ -165,7 +166,9 @@ impl LoginUser {
 }
 
 impl Responder for User {
-    fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
+    type Body = BoxBody;
+
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse<Self::Body> {
         let response = match serde_json::to_string(&self) {
             Ok(body) => {
                 // Create response and set content type
@@ -181,14 +184,12 @@ impl Responder for User {
 }
 
 impl FromRequest for InsertUser {
-    type Config = ();
-
     type Error = AppError;
 
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        JsonBody::new(req, payload, None)
+        JsonBody::new(req, payload, None, false)
             .limit(4056)
             .map(|res: Result<InsertUser, _>| match res {
                 Ok(insert_user) => insert_user.validate().map_err(|fail| AppError::from(fail)),
@@ -199,14 +200,12 @@ impl FromRequest for InsertUser {
 }
 
 impl FromRequest for UpdateUser {
-    type Config = ();
-
     type Error = AppError;
 
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        JsonBody::new(req, payload, None)
+        JsonBody::new(req, payload, None, false)
             .limit(4056)
             .map(|res: Result<UpdateUser, _>| match res {
                 Ok(update_user) => update_user.validate().map_err(|fail| AppError::from(fail)),

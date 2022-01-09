@@ -178,7 +178,6 @@ mod tests {
     use actix_session::CookieSession;
     use actix_web::{
         cookie::Cookie,
-        dev::ServiceResponse,
         http::StatusCode,
         test,
         web::{self, ServiceConfig},
@@ -530,8 +529,7 @@ mod tests {
         let task_favorite_request = test::TestRequest::post()
             .uri(&format!("/tasks/favorite/{}", task.id))
             .to_request();
-        let task_favorite_response: ServiceResponse =
-            test::call_service(&mut app, task_favorite_request).await;
+        let task_favorite_response = test::call_service(&mut app, task_favorite_request).await;
         assert_eq!(task_favorite_response.status(), StatusCode::FOUND);
 
         // NOTE(alex): Retrieve the session cookies to insert them into the find favorite request.

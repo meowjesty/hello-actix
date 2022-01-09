@@ -3,7 +3,7 @@ mod common;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_session::CookieSession;
 use actix_web::{
-    cookie::Cookie, dev::ServiceResponse, http::StatusCode, test, web::ServiceConfig, App,
+    cookie::Cookie, http::StatusCode, test, web::ServiceConfig, App,
 };
 use common::setup_data;
 use integration_lib::users::{
@@ -260,8 +260,7 @@ pub async fn test_user_logout() {
         .uri("/users/register")
         .set_json(&new_user)
         .to_request();
-    let register_user_service_response: ServiceResponse =
-        test::call_service(&mut app, register_user_request).await;
+    let register_user_service_response = test::call_service(&mut app, register_user_request).await;
     assert!(register_user_service_response.status().is_success());
 
     let user: User = test::read_body_json(register_user_service_response).await;
@@ -274,7 +273,7 @@ pub async fn test_user_logout() {
         .uri("/users/login")
         .set_json(&login_user)
         .to_request();
-    let login_service_response: ServiceResponse = test::call_service(&mut app, login_request).await;
+    let login_service_response = test::call_service(&mut app, login_request).await;
     assert!(login_service_response.status().is_success());
 
     let cookies = login_service_response.response().cookies();

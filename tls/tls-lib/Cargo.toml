@@ -11,19 +11,20 @@ keywords = ["actix-web", "webdev", "reference"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = { version = "4.0.0-beta.8", features = ["rustls"] }
-actix-session = { version = "0.5.0-beta.2"}
-actix-identity = { version = "0.4.0-beta.2"}
-actix-web-httpauth = {version = "0.6.0-beta.2" }
-serde = { version = "*", features = ["derive"] }
-serde_json = { version = "*" }
-thiserror = "*"
-sqlx = { version = "*", features = [ "runtime-actix-rustls", "sqlite" ] }
-env_logger = "*"
-log = "*"
-futures = "*"
-time = "*"
-rustls = "*"
+actix-web = { version = "4.0.0-beta.19", features = ["rustls"] }
+actix-session = { version = "0.5.0-beta.7" }
+actix-identity = { version = "0.4.0-beta.7" }
+actix-web-httpauth = { version = "0.6.0-beta.7" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+thiserror = "1.0"
+sqlx = { version = "0.5", features = [ "runtime-actix-rustls", "sqlite" ] }
+env_logger = "0.9"
+log = "0.4"
+futures = "0.3"
+time = "0.3"
+rustls = "0.20"
+rustls-pemfile = "0.2"
 
 [dev-dependencies]
-actix-rt = "*"
+actix-rt = "2.5"

@@ -13,5 +13,5 @@ keywords = ["actix-web", "webdev", "reference"]
 
 [dependencies]
 integration-lib = { path = "integration-lib" }
-actix-web = { version = "4.0.0-beta.8" }
-env_logger = "*"
+actix-web = { version = "4.0.0-beta.19" }
+env_logger = "0.9"

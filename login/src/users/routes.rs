@@ -97,7 +97,6 @@ mod tests {
     use actix_identity::{CookieIdentityPolicy, IdentityService};
     use actix_web::{
         cookie::Cookie,
-        dev::ServiceResponse,
         http::StatusCode,
         test,
         web::{self, ServiceConfig},
@@ -363,7 +362,7 @@ mod tests {
             .uri("/users/register")
             .set_json(&new_user)
             .to_request();
-        let register_user_service_response: ServiceResponse =
+        let register_user_service_response =
             test::call_service(&mut app, register_user_request).await;
         assert!(register_user_service_response.status().is_success());
 
@@ -377,8 +376,7 @@ mod tests {
             .uri("/users/login")
             .set_json(&login_user)
             .to_request();
-        let login_service_response: ServiceResponse =
-            test::call_service(&mut app, login_request).await;
+        let login_service_response = test::call_service(&mut app, login_request).await;
         assert!(login_service_response.status().is_success());
 
         let cookies = login_service_response.response().cookies();
