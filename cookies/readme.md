@@ -5,7 +5,7 @@
 The cookies project mainly introduces 2 new features:
 
 1. [actix-session](https://github.com/actix/actix-extras/tree/master/actix-session), and
-2. [`FromRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.FromRequest.html);
+2. [`FromRequest`](https://docs.rs/actix-web/latest/actix_web/trait.FromRequest.html);
 
 Most of the project remains the same, so this should be a quick chapter to read. Grab a cup of milk
 and let's dip in!
@@ -13,7 +13,7 @@ and let's dip in!
 ## 4.2 Cookies middleware
 
  The `actix-session` crate has a ready to use
- [`CookieSession`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.CookieSession.html)
+ [`CookieSession`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html)
  middleware, so you should know the drill. Let's jump into [main.rs](src/main.rs), and add a new
  `App::wrap` call.
 
@@ -22,14 +22,14 @@ wrap(CookieSession::signed(&[0; 32]).secure(false))
  ```
 
 `CookieSession` has a limit of `4000 bytes`, and you'll get an error if you try going above it. The
-[`signed`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.CookieSession.html#method.signed)
+[`signed`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.signed)
 call sets this cookie as plaintext to be stored on the client, with a signature, so it **cannot** be
 modified by the client. The alternative is using
-[`private`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.CookieSession.html#method.private)
+[`private`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.private)
 which encrypts the cookie, and cannot be viewed by the client.
 
 We also call
-[`secure`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.CookieSession.html#method.secure)
+[`secure`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.secure)
 setting it to `false`, meaning that we don't care about secure connections. If you set it to `true`,
 then the cookie would travel only through HTTPS.
 
@@ -51,7 +51,7 @@ Woah! It was `FromRequest` all along?!
 
 Much like the `Responder` trait turns your things into `HttpResponse`s, the `FromRequest` trait
 extracts your things from a
-[`HttpRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpRequest.html).
+[`HttpRequest`](https://docs.rs/actix-web/latest/actix_web/struct.HttpRequest.html).
 
 This trait is quite a bit more complicated though, as you can see when we implement it for
 `InsertTask`, and for `UpdateTask`. It expects you to fill in 3 types: `Config`, `Error`, and
@@ -62,7 +62,7 @@ the villainous `Future`.
 We're not going to be using this one, in my futile attempt of keeping things as simple as possible,
 but it still merits talking a bit about it.
 
-The [`Config`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.FromRequest.html#associatedtype.Config)
+The [`Config`](https://docs.rs/actix-web/latest/actix_web/trait.FromRequest.html#associatedtype.Config)
 docs just say:
 
 > Configuration for this extractor.
@@ -116,9 +116,9 @@ information out of the request, and `payload` contains the data we want to extra
 return is `Self::Future`, and inside is our `Result<T, E>`.
 
 We're going to use
-[`JsonBody`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/enum.JsonBody.html) to keep our
+[`JsonBody`](https://docs.rs/actix-web/latest/actix_web/dev/enum.JsonBody.html) to keep our
 extraction process simple, as it provides a nice
-[`JsonBody::new`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/enum.JsonBody.html#method.new)
+[`JsonBody::new`](https://docs.rs/actix-web/latest/actix_web/dev/enum.JsonBody.html#method.new)
 function that does the heavy lifting of extracting a json from the request, payload pair.
 
 We then `map` the result of `JsonBody::new` to be of our appropriate type
@@ -129,7 +129,7 @@ Lastly we use `boxed_local` to wrap our result in `Self::Future`.
 
 This trait is a "bit" more complicated than the others we've seen so far, if you want to dip deeper,
 I suggest you read the
-[`Json<T>`](https://docs.rs/actix-web/4.0.0-beta.8/src/actix_web/types/json.rs.html#136-158)
+[`Json<T>`](https://docs.rs/actix-web/latest/src/actix_web/types/json.rs.html#136-158)
 implementation of `FromRequest`. There you'll see a `JsonConfig`, and a `JsonExtractFut` future. A
 true behind the scenes for your learning.
 
@@ -145,11 +145,11 @@ async fn find_favorite(session: Session) -> Result<impl Responder, AppError>
 ```
 
 Our first time seeing the
-[`Session`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html) extractor.
+[`Session`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html) extractor.
 It's our way of using the `CookieSession` and accessing the cookies.
 
 The `find_favorite` function just uses the
-[`session::get::<T>`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.get)
+[`session::get::<T>`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.get)
  to find a cookie with the key `"favorite_task"`. In case there is none, we return the new
  `TaskError::NoneFavorite`.
 
@@ -159,11 +159,11 @@ async fn favorite(db_pool: web::Data<SqlitePool>, session: Session, id: web::Pat
 ```
 
 This one is a bit more elaborate, as it first calls
-[`session.remove`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.remove)
+[`session.remove`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.remove)
 to, well, remove whatever `"favorite_task"` is stored in the cookie. It then goes into the database
 searching for a `Task` if the `Task::id` is different (this function toggles a _favorite_), when a
 `Task` is found we use
-[`session.insert`](https://docs.rs/actix-session/0.5.0-beta.2/actix_session/struct.Session.html#method.insert)
+[`session.insert`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.insert)
 to put the key (`&str`) value (`Task`) pair in the cookie.
 
 The last change of notice appears in `find_by_id`:

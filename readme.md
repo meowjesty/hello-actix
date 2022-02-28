@@ -11,7 +11,7 @@ A bunch of **To-do** web apps written with an increasing amount of features usin
 [actix-web](https://github.com/actix/actix-web) framework, and its friends in
 [actix-extras](https://github.com/actix/actix-extras).
 
-This uses the `actix-web: 4.0.0-beta` releases!
+This uses the `actix-web: 4` release!
 
 ### Things to keep in mind
 
@@ -39,7 +39,7 @@ going much further than that into security practices here.
    [`actix-web`](https://github.com/actix/actix-web);
 
 2. [in-memory](in-memory/): Using
-   [`web::Data`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.Data.html#) to hold an
+   [`web::Data`](https://docs.rs/actix-web/latest/actix_web/web/struct.Data.html) to hold an
    in-memory database of sorts (if you call having a `Mutex<Vec<T>>` as "using a database");
 
 3. [sqlite](sqlite/): Gets rid of `Mutex<Vec<T>>` "database" in favor of a proper sqlite
@@ -99,7 +99,7 @@ cargo test -p sqlite -- --test-threads=1
   tests (this is a
   [`dev-dependency`](https://doc.rust-lang.org/rust-by-example/testing/dev_dependencies.html) only);
 - [serde](https://github.com/serde-rs/serde): Serialize and deserialize our `Task`s;
-- [serde_json](https://github.com/serde-rs/json): Does it with Json;
+- [serde_json](https://github.com/serde-rs/json): Does it with JSON;
 - [thiserror](https://github.com/dtolnay/thiserror): Helps us to derive our custom `Error`s;
 - [sqlx](https://github.com/launchbadge/sqlx): `SQLite` and friends for our `Task` and `User`;
 - [log](https://github.com/rust-lang/log): Fancy `println` to log my mistakes;

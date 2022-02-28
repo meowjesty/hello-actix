@@ -29,18 +29,18 @@ Time to explore the `AppError` enum. First, we're using
 [`thiserror`](https://docs.rs/thiserror/1.0.26/thiserror/) crate to get a nice
 `#[derive(Error)]` macro and `#[error("")]` attribute, this makes life easier when we want to use
 custom errors. But `AppError` also implements
-[`ResponseError`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.ResponseError.html).
+[`ResponseError`](https://docs.rs/actix-web/latest/actix_web/trait.ResponseError.html).
 
 The `ResponseError` trait is how actix will be able to generate responses when a request generates
 an error. You must implement two functions:
 
-- [`status_code`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.ResponseError.html#method.status_code): what status code should we respond with, we'll be matching on our error and trying to
+- [`status_code`](https://docs.rs/actix-web/latest/actix_web/trait.ResponseError.html#method.status_code): what status code should we respond with, we'll be matching on our error and trying to
   respond with an appropriate HTTP code;
-- [`error_response`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.ResponseError.html#method.error_response): the `HttpResponse` that we reply with, we'll be just converting our
+- [`error_response`](https://docs.rs/actix-web/latest/actix_web/trait.ResponseError.html#method.error_response): the `HttpResponse` that we reply with, we'll be just converting our
   error into a string and putting it inside the body of the response;
 
 Actix provides the HTTP status codes you expect through
-[`actix_web::http::StatusCode`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html).
+[`actix_web::http::StatusCode`](https://docs.rs/actix-web/latest/actix_web/http/struct.StatusCode.html).
 There are a bunch of provided by actix itself, and we'll be using those.
 
 With this we're done with our own types, it's time to dive.
@@ -49,9 +49,9 @@ With this we're done with our own types, it's time to dive.
 
 As we've seen in the [`minimal`](../minimal/) project, to set up a route we just call `App::service`
 and pass it our route function (`index`), but now we have 2 new friends:
-[`App::app_data`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.app_data),
+[`App::app_data`](https://docs.rs/actix-web/latest/actix_web/struct.App.html#method.app_data),
 and
-[`App::configure`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.configure).
+[`App::configure`](https://docs.rs/actix-web/latest/actix_web/struct.App.html#method.configure).
 
 ### 2.2.1 `App::app_data` and how it relates to our struct conveniently called `AppData`
 
@@ -70,7 +70,7 @@ and our task list is wrapped in a `Mutex`.
 
 You may have noticed that we're not passing our `AppData` struct directly into it though, first we
 wrap it with some
-[`Data::new`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.Data.html#) function. This
+[`Data::new`](https://docs.rs/actix-web/latest/actix_web/web/struct.Data.html#) function. This
 will be clearer later when we talk about our routes, but to not leave you hanging, `Data` helps
 to extract whatever we put in `App::app_data` in our routes.
 
@@ -110,9 +110,9 @@ that these functions return `Result<HttpResponse, AppError>` instead. Well, you'
 `error_response` function to convert `Err(...)` into a `HttpResponse`.
 
 There is another trait that we're not using explicitly (yet), called
-[`Responder`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.Responder.html) which is very
+[`Responder`](https://docs.rs/actix-web/latest/actix_web/trait.Responder.html) which is very
 similar to `ResponseError`, but not error specific. Actix implements this trait for many
-[types](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.Responder.html#foreign-impls), and
+[types](https://docs.rs/actix-web/latest/actix_web/trait.Responder.html#foreign-impls), and
 `Result<T, E>` happens to be one of those, so it knows how to make a response out of `Ok(...)`.
 
 I'm being very explicit in this project with the return types, constructing a `HttpResponse` and
@@ -130,7 +130,7 @@ These parameters are called **extractors**, and they're nifty little helpers to 
 request. If not for them, you would need to define these services with a `request: HttpRequest`
 parameter, and manually take the data from within `request`. Not a very productive way of doing
 things, check out
-[`HttpRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpRequest.html) if you
+[`HttpRequest`](https://docs.rs/actix-web/latest/actix_web/struct.HttpRequest.html) if you
 want to learn a bit more about doing it this way.
 
 - `Data<AppData>`
@@ -152,7 +152,7 @@ deserialized from json. We implement `serde::Serialize` and `serde::Deserialize`
 our types.
 
 You may implement a custom error handler for this kind of extractor with
-[`JsonConfig::error_handler`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.JsonConfig.html#method.error_handler). There are also custom `error_handler`s for the `Form`, `Path`, and
+[`JsonConfig::error_handler`](https://docs.rs/actix-web/latest/actix_web/web/struct.JsonConfig.html#method.error_handler). There are also custom `error_handler`s for the `Form`, `Path`, and
 `Query` (config) extractors.
 
 - `Path<u64>`

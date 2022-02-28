@@ -10,9 +10,9 @@ protection, and that's what we'll be tackling here.
 
 The [actix-web-httpauth](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth) crate
 provides us with the
-[`HttpAuthentication`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/middleware/struct.HttpAuthentication.html#)
+[`HttpAuthentication`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/middleware/struct.HttpAuthentication.html)
 middleware. We'll be using its
-[`HttpAuthentication::bearer`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.bearer)
+[`HttpAuthentication::bearer`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.bearer)
 version.
 
 The [_Bearer_](https://datatracker.ietf.org/doc/html/rfc6750) authorization uses an access token to
@@ -27,14 +27,14 @@ and `GET` services in general), so we'll be wrapping individual services in the 
 
 There are a few ways of using `wrap`:
 
-- [`App::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.wrap) as
+- [`App::wrap`](https://docs.rs/actix-web/latest/actix_web/struct.App.html#method.wrap) as
   we've been doing, it registers the middleware for the whole `App`;
-- [`Resource::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Resource.html#method.wrap)
+- [`Resource::wrap`](https://docs.rs/actix-web/latest/actix_web/struct.Resource.html#method.wrap)
   this wraps a specific
-  [`Resource`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Resource.html) only (we'll
+  [`Resource`](https://docs.rs/actix-web/latest/actix_web/struct.Resource.html) only (we'll
   be using this version to protect some services, but in its macro form);
-- [`Scope::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Scope.html#method.wrap)
-  which protects by [`Scope`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.Scope.html)
+- [`Scope::wrap`](https://docs.rs/actix-web/latest/actix_web/struct.Scope.html#method.wrap)
+  which protects by [`Scope`](https://docs.rs/actix-web/latest/actix_web/struct.Scope.html)
   (a way of grouping services under a singular scope);
 
 The `App::wrap` version we've been using would require us to send requests with an authorization
@@ -69,13 +69,13 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
 
 `HttpAuthentication` middleware provides 2 forms of authentication, `BasicAuth` and `BearerAuth`, so
 this function signature must match the kind you want.
-The [`BearerAuth`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html)
+The [`BearerAuth`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html)
 extractor gives us with a way to check the
-[`token`](https://docs.rs/actix-web-httpauth/0.6.0-beta.2/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html#method.token)
+[`token`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html#method.token)
 provided by the request header, without us having to manually dig into the `req` parameter.
 
 This middleware function will be called pre-services, so it must return a
-[`ServiceRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/dev/struct.ServiceRequest.html)
+[`ServiceRequest`](https://docs.rs/actix-web/latest/actix_web/dev/struct.ServiceRequest.html)
 that will be passed onwards. Note that this is not a `HttpRequest`, but a `ServiceRequest`, the
 difference being that `ServiceRequest` gives **mutable** access to the request contents, so we may
 alter the request before it's passed down to our services.

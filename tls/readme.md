@@ -40,9 +40,9 @@ This function will load and parse our certificate into the type that actix-web w
 
 We use the [`rustls::ServerConfig`](https://docs.rs/rustls/0.19.1/rustls/struct.ServerConfig.html)
 returned, and pass it into
-[`HttpServer::bind_rustls`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpServer.html#method.bind_rustls).
+[`HttpServer::bind_rustls`](https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.bind_rustls).
 Previously, we were just using
-[`HttpServer::bind`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpServer.html#method.bind)
+[`HttpServer::bind`](https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.bind)
 to bind an address, but now we bind the address, and the TLS configuration.
 
 ## 8.3 🔒

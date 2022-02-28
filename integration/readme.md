@@ -95,11 +95,11 @@ There is one new thing in there:
 let user: User = test::read_body_json(insert_user_response).await;
 ```
 
-[`test::read_body_json`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.read_body_json.html)
+[`test::read_body_json`](https://docs.rs/actix-web/latest/actix_web/test/fn.read_body_json.html)
 is a neat actix helper that takes a `ServiceResponse` and extracts the json body into our `User`
 type. It takes a bit of fiddling with a `ServiceResponse` to do the same without this function and
 its friend
-[`test::read_body`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.read_body.html).
+[`test::read_body`](https://docs.rs/actix-web/latest/actix_web/test/fn.read_body.html).
 
 The second macro you'll see is the `setup_app!` call, in
 [mod.rs](integration-lib/tests/common/mod.rs), and it's a tiny bit bigger than this one.
@@ -159,16 +159,16 @@ this is the `User` that we will be updating.
 
 After all this setup, we're finally ready to create the `TestRequest` we're interested in, with the
 help of
-[`TestRequest::insert_header`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html#method.insert_header),
+[`TestRequest::insert_header`](https://docs.rs/actix-web/latest/actix_web/test/struct.TestRequest.html#method.insert_header),
 and
-[`TestRequest::cookie`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html#method.cookie).
+[`TestRequest::cookie`](https://docs.rs/actix-web/latest/actix_web/test/struct.TestRequest.html#method.cookie).
 
 Finally, we just assert if the `ServiceResponse::status()` was successful. Some tests will compare
-the [`StatusCode`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html)
+the [`StatusCode`](https://docs.rs/actix-web/latest/actix_web/http/struct.StatusCode.html)
 directly against what we expect from the service, instead of if they were just successful, this is
 to cover some services that respond with
-[`StatusCode::FOUND`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html#associatedconstant.FOUND), or
-[`StatusCode::NOT_MODIFIED`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/http/struct.StatusCode.html#associatedconstant.NOT_MODIFIED).
+[`StatusCode::FOUND`](https://docs.rs/actix-web/latest/actix_web/http/struct.StatusCode.html#associatedconstant.FOUND), or
+[`StatusCode::NOT_MODIFIED`](https://docs.rs/actix-web/latest/actix_web/http/struct.StatusCode.html#associatedconstant.NOT_MODIFIED).
 
 Most of the tests will look like this, except the ones that don't require authentication. I've left
 the `test_user_logout` as an "expanded" test case, so it doesn't make use of macros.

@@ -115,13 +115,13 @@ level data.
 
 But hey, what is this `App::wrap` thing at the end? Oh, nice of you to have noticed! It's our little
 introduction to actix_web
-[`middleware`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/middleware/index.html). This is one
+[`middleware`](https://docs.rs/actix-web/latest/actix_web/middleware/index.html). This is one
 of the provided middlewares, used to neatly log stuff.
 
 ### 3.2.2 Brief introduction to middlewares
 
 By using
-[`App::wrap`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.App.html#method.wrap) we set
+[`App::wrap`](https://docs.rs/actix-web/latest/actix_web/struct.App.html#method.wrap) we set
 up a hook for our whole application. This allows us to mess with requests (preprocess),
 responses (post-process), app state, and external services (logging in our case).
 
@@ -174,7 +174,7 @@ This covers most of the `impl` blocks but one:
 impl Responder for Task
 ```
 
-The [`Responder`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/trait.Responder.html) trait is
+The [`Responder`](https://docs.rs/actix-web/latest/actix_web/trait.Responder.html) trait is
 pretty much like `ResponseError`, with the main difference being that, it's not specific for errors.
 When we implement this for `Task`, we avoid having to manually convert `Task`s into some string that
 goes in the `HttpResponse::body`. Now we're getting this by default, even though we won't be taking
@@ -194,8 +194,8 @@ remaining are the validation checks for refusing tasks with an empty `title`.
 
 The previous project was just return `HttpResponse::Ok`, but now we have a bit more variety:
 
-- [`HttpResponse::NotModified`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpResponse.html#method.NotModified);
-- [`HttpResponse::Found`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/struct.HttpResponse.html#method.Found);
+- [`HttpResponse::NotModified`](https://docs.rs/actix-web/latest/actix_web/struct.HttpResponse.html#method.NotModified);
+- [`HttpResponse::Found`](https://docs.rs/actix-web/latest/actix_web/struct.HttpResponse.html#method.Found);
 
 Another notable change is that most routes now have `Result<impl Responder, AppError>`, instead of
 `Result<HttpResponse, AppError>`. We're using the `Responder` trait as the return type, this means
@@ -218,7 +218,7 @@ async fn find_by_pattern(db_pool: web::Data<SqlitePool>, pattern: web::Query<Que
 ```
 
 Lastly, we now use the actix
-[`Query`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/web/struct.Query.html) extractor, not to
+[`Query`](https://docs.rs/actix-web/latest/actix_web/web/struct.Query.html) extractor, not to
 be confused with a database query. It handles requests containing query parameters and just as the
 `Json<T>` will try to convert `T` into our `QueryTask` type.
 
@@ -232,7 +232,7 @@ To test our actix services, we'll be adding a new `dev-dependency`:
 runtime for our tests.
 
 There is also the
-[`actix_web::test`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/index.html) module, that
+[`actix_web::test`](https://docs.rs/actix-web/latest/actix_web/test/index.html) module, that
 provides some nice testing facilities.
 
 We'll be talking only about the tests in [main.rs](src/main.rs), as the tests in
@@ -248,14 +248,14 @@ async fn test_index_get
 ```
 
 The test for a `GET` request, we use
-[`init_service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.init_service.html) to
+[`init_service`](https://docs.rs/actix-web/latest/actix_web/test/fn.init_service.html) to
 initialize the `index` service. This will set up our `App` and start running it.
 
-The [`TestRequest`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/struct.TestRequest.html)
+The [`TestRequest`](https://docs.rs/actix-web/latest/actix_web/test/struct.TestRequest.html)
 builder helps us create an HTTP request. In this case `GET` with `/` path.
 
 We then use
-[`call_service`](https://docs.rs/actix-web/4.0.0-beta.8/actix_web/test/fn.call_service.html) passing
+[`call_service`](https://docs.rs/actix-web/latest/actix_web/test/fn.call_service.html) passing
 it our `Request` to get a response (`ServiceResponse`).
 
 Finally, we just assert the response status code, expecting a successful status code.
