@@ -13,7 +13,7 @@ and let's dip in!
 ## 4.2 Cookies middleware
 
  The `actix-session` crate has a ready to use
- [`CookieSession`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html)
+ [`CookieSession`](https://docs.rs/actix-session/latest/actix_session/struct.CookieSession.html)
  middleware, so you should know the drill. Let's jump into [main.rs](src/main.rs), and add a new
  `App::wrap` call.
 
@@ -22,14 +22,14 @@ wrap(CookieSession::signed(&[0; 32]).secure(false))
  ```
 
 `CookieSession` has a limit of `4000 bytes`, and you'll get an error if you try going above it. The
-[`signed`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.signed)
+[`signed`](https://docs.rs/actix-session/latest/actix_session/struct.CookieSession.html#method.signed)
 call sets this cookie as plaintext to be stored on the client, with a signature, so it **cannot** be
 modified by the client. The alternative is using
-[`private`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.private)
+[`private`](https://docs.rs/actix-session/latest/actix_session/struct.CookieSession.html#method.private)
 which encrypts the cookie, and cannot be viewed by the client.
 
 We also call
-[`secure`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.CookieSession.html#method.secure)
+[`secure`](https://docs.rs/actix-session/latest/actix_session/struct.CookieSession.html#method.secure)
 setting it to `false`, meaning that we don't care about secure connections. If you set it to `true`,
 then the cookie would travel only through HTTPS.
 
@@ -145,11 +145,11 @@ async fn find_favorite(session: Session) -> Result<impl Responder, AppError>
 ```
 
 Our first time seeing the
-[`Session`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html) extractor.
+[`Session`](https://docs.rs/actix-session/latest/actix_session/struct.Session.html) extractor.
 It's our way of using the `CookieSession` and accessing the cookies.
 
 The `find_favorite` function just uses the
-[`session::get::<T>`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.get)
+[`session::get::<T>`](https://docs.rs/actix-session/latest/actix_session/struct.Session.html#method.get)
  to find a cookie with the key `"favorite_task"`. In case there is none, we return the new
  `TaskError::NoneFavorite`.
 
@@ -159,11 +159,11 @@ async fn favorite(db_pool: web::Data<SqlitePool>, session: Session, id: web::Pat
 ```
 
 This one is a bit more elaborate, as it first calls
-[`session.remove`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.remove)
+[`session.remove`](https://docs.rs/actix-session/latest/actix_session/struct.Session.html#method.remove)
 to, well, remove whatever `"favorite_task"` is stored in the cookie. It then goes into the database
 searching for a `Task` if the `Task::id` is different (this function toggles a _favorite_), when a
 `Task` is found we use
-[`session.insert`](https://docs.rs/actix-session/0.5.0-beta.8/actix_session/struct.Session.html#method.insert)
+[`session.insert`](https://docs.rs/actix-session/latest/actix_session/struct.Session.html#method.insert)
 to put the key (`&str`) value (`Task`) pair in the cookie.
 
 The last change of notice appears in `find_by_id`:

@@ -24,13 +24,13 @@ To handle login / logout we'll be using the
 
 At this point you're probably very familiar with how to set up a middleware in actix. We first call
 `App::wrap` and pass it the new
-[`IdentityService`](https://docs.rs/actix-identity/0.4.0-beta.9/actix_identity/struct.IdentityService.html)
+[`IdentityService`](https://docs.rs/actix-identity/latest/actix_identity/struct.IdentityService.html)
 middleware, that we'll be later accessing via some extractor, which for `IdentityService` is called
-[`Identity`](https://docs.rs/actix-identity/0.4.0-beta.9/actix_identity/struct.Identity.html).
+[`Identity`](https://docs.rs/actix-identity/latest/actix_identity/struct.Identity.html).
 
 `IdentityService` creation is a lot like `CookieSession`, we give it a name for the cookie, set an
 expiration time
-([`login_deadline`](https://docs.rs/actix-identity/0.4.0-beta.9/actix_identity/struct.CookieIdentityPolicy.html#method.login_deadline)), and tell if it should be `secure` or not.
+([`login_deadline`](https://docs.rs/actix-identity/latest/actix_identity/struct.CookieIdentityPolicy.html#method.login_deadline)), and tell if it should be `secure` or not.
 
 That's all we'll be using to handle our `User` login.
 
@@ -62,8 +62,8 @@ async fn logout(identity: Identity) -> impl Responder
 ```
 
 This is our first time meeting the `Identity` extractor. We'll be using the pair of
-[`Identity::remember`](https://docs.rs/actix-identity/0.4.0-beta.9/actix_identity/struct.Identity.html#method.remember)
-and [`Identity::forget`](https://docs.rs/actix-identity/0.4.0-beta.9/actix_identity/struct.Identity.html#method.forget)
+[`Identity::remember`](https://docs.rs/actix-identity/latest/actix_identity/struct.Identity.html#method.remember)
+and [`Identity::forget`](https://docs.rs/actix-identity/latest/actix_identity/struct.Identity.html#method.forget)
 to handle login and logout respectively.
 
 These 2 services are the driving force behind this project. We're not doing anything elaborate with

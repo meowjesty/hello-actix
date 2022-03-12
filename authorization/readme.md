@@ -10,9 +10,9 @@ protection, and that's what we'll be tackling here.
 
 The [actix-web-httpauth](https://github.com/actix/actix-extras/tree/master/actix-web-httpauth) crate
 provides us with the
-[`HttpAuthentication`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/middleware/struct.HttpAuthentication.html)
+[`HttpAuthentication`](https://docs.rs/actix-web-httpauth/latest/actix_web_httpauth/middleware/struct.HttpAuthentication.html)
 middleware. We'll be using its
-[`HttpAuthentication::bearer`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.bearer)
+[`HttpAuthentication::bearer`](https://docs.rs/actix-web-httpauth/latest/actix_web_httpauth/middleware/struct.HttpAuthentication.html#method.bearer)
 version.
 
 The [_Bearer_](https://datatracker.ietf.org/doc/html/rfc6750) authorization uses an access token to
@@ -69,9 +69,9 @@ async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<Servi
 
 `HttpAuthentication` middleware provides 2 forms of authentication, `BasicAuth` and `BearerAuth`, so
 this function signature must match the kind you want.
-The [`BearerAuth`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html)
+The [`BearerAuth`](https://docs.rs/actix-web-httpauth/latest/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html)
 extractor gives us with a way to check the
-[`token`](https://docs.rs/actix-web-httpauth/0.6.0-beta.8/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html#method.token)
+[`token`](https://docs.rs/actix-web-httpauth/latest/actix_web_httpauth/extractors/bearer/struct.BearerAuth.html#method.token)
 provided by the request header, without us having to manually dig into the `req` parameter.
 
 This middleware function will be called pre-services, so it must return a
